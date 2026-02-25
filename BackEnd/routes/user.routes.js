@@ -15,19 +15,19 @@ router.use(authenticateUser);
 // =====================================================
 router.get(
   "/",
-  authorizeRoles("ADMIN", "SUPPLIER", "DISTRIBUTOR", "CUSTOMER"),
+  authorizeRoles("ADMIN", "USER"),
   userController.getUserByEmail
 );
 
 router.put(
   "/",
-  authorizeRoles("ADMIN", "SUPPLIER", "DISTRIBUTOR", "CUSTOMER"),
+  authorizeRoles("ADMIN", "USER"),
   userController.updateUser
 );
 
 router.delete(
   "/",
-  authorizeRoles("ADMIN", "SUPPLIER", "DISTRIBUTOR", "CUSTOMER"),
+  authorizeRoles("ADMIN", "USER"),
   userController.deleteUser
 );
 

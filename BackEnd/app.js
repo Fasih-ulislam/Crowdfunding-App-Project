@@ -1,11 +1,6 @@
 import express from "express";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
-import roleRequestRoutes from "./routes/role.request.routes.js";
-import supplierRoutes from "./routes/supplier.routes.js";
-import distributorRoutes from "./routes/distributor.routes.js";
-import orderRoutes from "./routes/order.routes.js";
-import verificationRoutes from "./routes/verification.routes.js";
 import errorHandler from "./middlewares/globalErrorHandler.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -63,16 +58,6 @@ app.use("/api/auth", authRoutes);
 // Each route file handles its own authentication via authenticateUser middleware
 // User Routes
 app.use("/api/user", userRoutes);
-// Role Request Routes (customers request SUPPLIER/DISTRIBUTOR, admin approves)
-app.use("/api/role-request", roleRequestRoutes);
-// Supplier Routes (profile, products, inventory, transporters, orders)
-app.use("/api/supplier", supplierRoutes);
-// Distributor Routes (profile, transporters, order legs)
-app.use("/api/distributor", distributorRoutes);
-// Order Routes (customers create, suppliers approve, view)
-app.use("/api/order", orderRoutes);
-// Verification Routes (QR code verification for customers)
-app.use("/api/verify", verificationRoutes);
 
 /***************** ERROR HANDLING ****************/
 // Global Error Handler
