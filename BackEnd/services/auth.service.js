@@ -1,4 +1,4 @@
-import prisma from "../config/database.js";
+//import prisma from "../config/database.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import ResponseError from "../utils/customError.js";
@@ -16,8 +16,8 @@ async function sendOtpEmail(email, otp) {
       email,
       "Your OTP Code",
       `Your OTP is ${otp}`,
-      `<p>Your OTP code is <b>${otp}</b>. It will expire in 10 minutes.</p>`
-    )
+      `<p>Your OTP code is <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+    ),
   );
 }
 

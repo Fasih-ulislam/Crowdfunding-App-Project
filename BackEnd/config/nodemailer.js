@@ -11,7 +11,7 @@ export const transporter = nodemailer.createTransport({
 });
 
 export const mailOptions = (to, subject, text, html) => ({
-  from: `"Supply Chain manager" <${process.env.SMTP_USER}>`,
+  from: `"Trust Fund Team" <${process.env.SMTP_USER}>`,
   to,
   subject,
   text,
