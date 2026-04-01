@@ -1,15 +1,15 @@
-//import prisma from "../config/database.js";
+import pool from "../config/database.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import ResponseError from "../utils/customError.js";
 import { transporter, mailOptions } from "../config/nodemailer.js";
 
-// 🟩 Generate OTP (6 digits)
+// ── Generate OTP (6 digits) ──────────────────────────────────
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// 🟦 Send OTP
+// ── Send OTP email ───────────────────────────────────────────
 async function sendOtpEmail(email, otp) {
   await transporter.sendMail(
     mailOptions(
@@ -21,32 +21,47 @@ async function sendOtpEmail(email, otp) {
   );
 }
 
-// --------------------------------------------------------
-// 🔐 LOGIN USER (NO TRANSACTION NEEDED)
-// --------------------------------------------------------
-export async function loginUser({ email, password }) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      supplierProfile: true,
-      distributorProfile: true,
-    },
-  });
+// ─────────────────────────────────────────────────────────────
+// 🔐 LOGIN USER
+// ─────────────────────────────────────────────────────────────
+export async function loginUser({ email, password, activeRole }) {
+  // Get user
+  const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [
+    email,
+  ]);
 
+  const user = rows[0];
   if (!user) throw new ResponseError("Invalid Credentials", 401);
-  if (!(await bcrypt.compare(password, user.password)))
+
+  // Verify password
+  if (!(await bcrypt.compare(password, user.password_hash)))
     throw new ResponseError("Invalid Credentials", 401);
 
-  return user;
+  // Verify user actually has the requested role
+  const { rows: roleRows } = await pool.query(
+    `SELECT r.name
+     FROM user_roles ur
+     JOIN roles r ON ur.role_id = r.id
+     WHERE ur.user_id = $1 AND r.name = $2`,
+    [user.id, activeRole],
+  );
+
+  if (roleRows.length === 0)
+    throw new ResponseError(`You do not have the ${activeRole} role.`, 403);
+
+  return { ...user, role: activeRole };
 }
 
-// --------------------------------------------------------
-// 🟨 REGISTER USER (USE TRANSACTION)
-// --------------------------------------------------------
-export async function registerUser({ name, email, password }) {
-  // Check if already registered
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) throw new ResponseError("User already exists", 409);
+// ─────────────────────────────────────────────────────────────
+// 🟨 REGISTER USER
+// ─────────────────────────────────────────────────────────────
+export async function registerUser({ email, password }) {
+  // Check if already a verified user
+  const { rows: existing } = await pool.query(
+    `SELECT id FROM users WHERE email = $1`,
+    [email],
+  );
+  if (existing.length > 0) throw new ResponseError("User already exists", 409);
 
   const hashedPassword = await bcrypt.hash(password, 10);
   const otp = generateOtp();
@@ -54,68 +69,79 @@ export async function registerUser({ name, email, password }) {
 
   console.log(otp);
 
-  // Transaction ensures: delete old pending + create new pending is atomic
-  await prisma.$transaction(async (tx) => {
-    // Delete old pending entry if exists
-    await tx.pendingUser.deleteMany({ where: { email } });
+  // Atomic: delete old pending + insert new pending
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-    // Create new pending entry
-    await tx.pendingUser.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        otp,
-        otpExpiry,
-      },
-    });
-  });
+    await client.query(`DELETE FROM pending_users WHERE email = $1`, [email]);
+
+    await client.query(
+      `INSERT INTO pending_users (email, password_hash, otp_code, otp_expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [email, hashedPassword, otp, otpExpiry],
+    );
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 
   await sendOtpEmail(email, otp);
 
   return { message: "OTP sent to email" };
 }
 
-// --------------------------------------------------------
-// 🟩 VERIFY OTP (STRONG TRANSACTION REQUIRED)
-// --------------------------------------------------------
+// ─────────────────────────────────────────────────────────────
+// 🟩 VERIFY OTP
+// ─────────────────────────────────────────────────────────────
 export async function verifyOtp({ email, otp }) {
-  const pendingUser = await prisma.pendingUser.findUnique({ where: { email } });
+  const { rows } = await pool.query(
+    `SELECT * FROM pending_users WHERE email = $1`,
+    [email],
+  );
+
+  const pendingUser = rows[0];
   if (!pendingUser) throw new ResponseError("No pending user found", 404);
 
-  // Check expiry first
-  if (new Date() > pendingUser.otpExpiry) {
-    await prisma.pendingUser.delete({ where: { email } });
+  // Check expiry
+  if (new Date() > new Date(pendingUser.otp_expires_at)) {
+    await pool.query(`DELETE FROM pending_users WHERE email = $1`, [email]);
     throw new ResponseError("OTP expired. Please register again.", 401);
   }
 
-  // Timing-safe OTP comparison to prevent timing attacks
+  // Timing-safe OTP comparison
   const otpBuffer = Buffer.from(otp.padEnd(6, "0"));
-  const storedOtpBuffer = Buffer.from(pendingUser.otp.padEnd(6, "0"));
+  const storedOtpBuffer = Buffer.from(pendingUser.otp_code.padEnd(6, "0"));
   const isValidOtp = crypto.timingSafeEqual(otpBuffer, storedOtpBuffer);
 
   if (!isValidOtp) throw new ResponseError("Invalid OTP", 401);
 
-  // Transaction ensures atomic user creation + pending cleanup
-  // New users default to CUSTOMER role (single role per account)
-  const newUser = await prisma.$transaction(async (tx) => {
-    // Create main user with default CUSTOMER role
-    const createdUser = await tx.user.create({
-      data: {
-        name: pendingUser.name,
-        email: pendingUser.email,
-        password: pendingUser.password,
-        role: "CUSTOMER", // Default role - single role per account
-      },
-    });
+  // Atomic: create user + delete pending
+  // DB trigger auto-creates user_profile + assigns Donor role on INSERT
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-    // Delete pending entry
-    await tx.pendingUser.delete({
-      where: { email },
-    });
+    const { rows: created } = await client.query(
+      `INSERT INTO users (email, password_hash)
+       VALUES ($1, $2)
+       RETURNING id, email, trust_score, created_at`,
+      [pendingUser.email, pendingUser.password_hash],
+    );
 
-    return createdUser;
-  });
+    await client.query(`DELETE FROM pending_users WHERE email = $1`, [email]);
 
-  return newUser;
+    await client.query("COMMIT");
+
+    return created[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }

@@ -35,7 +35,7 @@ export function authorizeRoles(...allowedRoles) {
     if (!user.role || !allowedRoles.includes(user.role)) {
       return res.status(403).json({
         message: `Access denied. Required roles: ${allowedRoles.join(
-          ", "
+          ", ",
         )}. Your role: ${user.role || "none"}`,
       });
     }

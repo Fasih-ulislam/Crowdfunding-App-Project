@@ -6,7 +6,10 @@ import {
   logoutUser,
   getCurrentUser,
 } from "../controllers/auth.controller.js";
-import { authenticateUser } from "../middlewares/validate.user.middleware.js";
+import {
+  authenticateUser,
+  authorizeRoles,
+} from "../middlewares/validate.user.middleware.js";
 import {
   authLimiter,
   otpLimiter,
@@ -18,6 +21,7 @@ const router = Router();
 router.post("/register", otpLimiter, registerUser);
 router.post("/verify-otp", authLimiter, verifyOtp);
 router.post("/login", authLimiter, loginUser);
+
 router.post("/logout", logoutUser);
 
 // Protected routes

@@ -5,24 +5,21 @@ import Joi from "joi";
 // =====================================================
 
 export const userSchema = Joi.object({
-  name: Joi.string().trim().min(2).max(50).required(),
   email: Joi.string().trim().email().required(),
   password: Joi.string()
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/)
     .message(
-      "Password must contain at least 1 uppercase, 1 lowercase letter, and 1 number."
+      "Password must contain at least 1 uppercase, 1 lowercase letter, and 1 number.",
     )
     .required(),
-  picture: Joi.string().uri().optional(),
 }).unknown(false);
 
 export const pendingUserSchema = Joi.object({
-  name: Joi.string().trim().min(2).max(50).required(),
   email: Joi.string().trim().email().required(),
   password: Joi.string()
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/)
     .message(
-      "Password must contain at least 1 uppercase, 1 lowercase letter, and 1 number."
+      "Password must contain at least 1 uppercase, 1 lowercase letter, and 1 number.",
     )
     .required(),
 }).unknown(false);
@@ -30,26 +27,20 @@ export const pendingUserSchema = Joi.object({
 export const loginSchema = Joi.object({
   email: Joi.string().trim().email().required(),
   password: Joi.string().required(),
-  activeRole: Joi.string()
-    .valid("ADMIN", "USER")
-    .optional(),
+  activeRole: Joi.string().valid("Donor", "Creator", "Admin").required(),
 }).unknown(false);
 
 export const switchRoleSchema = Joi.object({
-  role: Joi.string()
-    .valid("ADMIN", "USER")
-    .required(),
+  role: Joi.string().valid("Donor", "Creator", "Admin").required(),
 }).unknown(false);
 
 export const userUpdateSchema = Joi.object({
-  name: Joi.string().trim().min(2).max(50).optional(),
   password: Joi.string()
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/)
     .message(
-      "Password must contain at least 1 uppercase, 1 lowercase letter, and 1 number."
+      "Password must contain at least 1 uppercase, 1 lowercase letter, and 1 number.",
     )
     .optional(),
-  picture: Joi.string().uri().optional(),
 }).unknown(false);
 
 export const otpSchema = Joi.object({
