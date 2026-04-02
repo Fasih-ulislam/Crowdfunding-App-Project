@@ -1,6 +1,7 @@
 import express from "express";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import applicationRoutes from "./routes/application.routes.js";
 import errorHandler from "./middlewares/globalErrorHandler.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -58,6 +59,9 @@ app.use("/api/auth", authRoutes);
 // Each route file handles its own authentication via authenticateUser middleware
 // User Routes
 app.use("/api/user", userRoutes);
+
+// Application Routes
+app.use("/api/application", applicationRoutes);
 
 /***************** ERROR HANDLING ****************/
 // Global Error Handler

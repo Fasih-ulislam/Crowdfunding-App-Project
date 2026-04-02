@@ -51,3 +51,21 @@ export const otpSchema = Joi.object({
     .message("OTP must be exactly 6 digits")
     .required(),
 }).unknown(false);
+
+// =====================================================
+// APPLICATION SCHEMAS
+// =====================================================
+
+export const applicationSchema = Joi.object({
+  phone: Joi.string().trim().required(),
+  work_email: Joi.string().trim().email().required(),
+  address: Joi.string().trim().required(),
+  facebook_url: Joi.string().trim().uri().optional().allow(null, ""),
+  instagram_url: Joi.string().trim().uri().optional().allow(null, ""),
+  linkedin_url: Joi.string().trim().uri().optional().allow(null, ""),
+}).unknown(false);
+
+export const applicationApprovalSchema = Joi.object({
+  status: Joi.string().valid("Approved", "Rejected").required(),
+  reviewed_by: Joi.string().optional().allow(null, ""),
+}).unknown(false);

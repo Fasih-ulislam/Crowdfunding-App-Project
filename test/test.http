@@ -1,0 +1,84 @@
+### Application API Tests
+### RestClient Extension: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+
+### ========================================
+### 0. LOGIN (DO THIS FIRST!)
+### ========================================
+### Login to get JWT token for other requests
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@gmail.com",
+  "password": "Test@123",
+  "activeRole": "Donor"
+}
+
+### Copy the token from response above and paste in Cookie below ↓
+
+### ========================================
+### 1. SUBMIT APPLICATION (POST)
+### ========================================
+### Only Donor can submit
+### Replace TOKEN_HERE with your token from login above
+POST http://localhost:3000/api/application
+Content-Type: application/json
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQyODcxYjQ1LTUwNmItNGZmMy1hY2I4LTVmZjFhZDJjNGU5MSIsImVtYWlsIjoidGVzdEBnbWFpbC5jb20iLCJyb2xlIjoiRG9ub3IiLCJpYXQiOjE3NzUwNzM3NTEsImV4cCI6MTc3NTA3NzM1MX0.9lsz_vXhbNYZFzs3QxIxAmVqUHvrVlKX9lpF2l0kCPM
+
+{
+  "phone": "03001234567",
+  "work_email": "creator@work.com",
+  "address": "123 Main Street, Karachi, Pakistan",
+  "facebook_url": "https://facebook.com/username",
+  "instagram_url": "https://instagram.com/username",
+  "linkedin_url": "https://linkedin.com/in/username"
+}
+
+### ========================================
+### 2. GET MY APPLICATIONS (GET)
+### ========================================
+### See all your submitted applications
+GET http://localhost:3000/api/application/my
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQyODcxYjQ1LTUwNmItNGZmMy1hY2I4LTVmZjFhZDJjNGU5MSIsImVtYWlsIjoidGVzdEBnbWFpbC5jb20iLCJyb2xlIjoiRG9ub3IiLCJpYXQiOjE3NzUwNzM3NTEsImV4cCI6MTc3NTA3NzM1MX0.9lsz_vXhbNYZFzs3QxIxAmVqUHvrVlKX9lpF2l0kCPM
+
+### ========================================
+### 3. GET ALL APPLICATIONS (GET)
+### ========================================
+### Admin only - See all applications
+GET http://localhost:3000/api/application/all
+Cookie: token=ADMIN_TOKEN_HERE
+
+### ========================================
+### 4. APPROVE APPLICATION (POST)
+### ========================================
+### Admin approves an application
+### Replace APP_ID with actual UUID from database
+POST http://localhost:3000/api/application/APP_ID/approve
+Content-Type: application/json
+Cookie: token=ADMIN_TOKEN_HERE
+
+{
+  "status": "Approved"
+}
+
+### ========================================
+### 5. REJECT APPLICATION (POST)
+### ========================================
+### Admin rejects an application
+POST http://localhost:3000/api/application/APP_ID/approve
+Content-Type: application/json
+Cookie: token=ADMIN_TOKEN_HERE
+
+{
+  "status": "Rejected"
+}
+
+### ========================================
+### HOW TO USE:
+### ========================================
+### 1. Click "Send Request" above LOGIN first
+### 2. Copy token from response
+### 3. Replace TOKEN_HERE in other requests with your token
+### 4. Replace ADMIN_TOKEN_HERE with admin user token
+### 5. Replace APP_ID with real application UUID
+### 6. Click "Send Request" on each test

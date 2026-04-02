@@ -1,0 +1,133 @@
+### Crowdfunding App - Comprehensive API Tests
+### RestClient Extension: https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+
+### Base URL
+@baseUrl = http://localhost:3000/api
+
+### ========================================
+### AUTH FLOW - START HERE
+### ========================================
+
+### 1. REGISTER NEW USER
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@gmail.com",
+  "password": "Test@123"
+}
+
+### Save the OTP from email/console output
+
+### ========================================
+### 2. VERIFY OTP
+POST {{baseUrl}}/auth/verify-otp
+Content-Type: application/json
+
+{
+  "email": "newuser@gmail.com",
+  "otp": "123456"
+}
+
+### ========================================
+### 3. LOGIN USER
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "newuser@gmail.com",
+  "password": "Test@123",
+  "activeRole": "Donor"
+}
+
+### Save the token from response above
+@userToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQyODcxYjQ1LTUwNmItNGZmMy1hY2I4LTVmZjFhZDJjNGU5MSIsImVtYWlsIjoidGVzdEBnbWFpbC5jb20iLCJyb2xlIjoiRG9ub3IiLCJpYXQiOjE3NzUwNzM3NTEsImV4cCI6MTc3NTA3NzM1MX0.9lsz_vXhbNYZFzs3QxIxAmVqUHvrVlKX9lpF2l0kCPM
+
+### ========================================
+### 4. GET CURRENT USER
+GET {{baseUrl}}/auth/me
+Cookie: token={{userToken}}
+
+### ========================================
+### 5. LOGOUT USER
+POST {{baseUrl}}/auth/logout
+Cookie: token={{userToken}}
+
+### ========================================
+### USER MANAGEMENT APIS
+### ========================================
+
+### 6. GET YOUR PROFILE
+GET {{baseUrl}}/user/
+Cookie: token={{userToken}}
+
+### ========================================
+### 7. UPDATE YOUR PROFILE
+PUT {{baseUrl}}/user/
+Content-Type: application/json
+Cookie: token={{userToken}}
+
+{
+  "firstName": "Johnny",
+  "lastName": "Doe Updated",
+  "phone": "03001234567"
+}
+
+### ========================================
+### 8. GET ALL USERS (ADMIN ONLY)
+GET {{baseUrl}}/user/all
+Cookie: token=ADMIN_TOKEN_HERE
+
+### ========================================
+### 9. DELETE YOUR ACCOUNT
+DELETE {{baseUrl}}/user/
+Cookie: token={{userToken}}
+
+### ========================================
+### APPLICATION APIS
+### ========================================
+
+### 10. SUBMIT APPLICATION (DONOR ONLY)
+POST {{baseUrl}}/application
+Content-Type: application/json
+Cookie: token={{userToken}}
+
+{
+  "phone": "03009876543",
+  "work_email": "donor@work.com",
+  "address": "456 Oak Street, Lahore, Pakistan",
+  "facebook_url": "https://facebook.com/newuser",
+  "instagram_url": "https://instagram.com/newuser",
+  "linkedin_url": "https://linkedin.com/in/newuser"
+}
+
+### ========================================
+### 11. GET YOUR APPLICATIONS
+GET {{baseUrl}}/application/my
+Cookie: token={{userToken}}
+
+### ========================================
+### 12. GET ALL APPLICATIONS (ADMIN ONLY)
+GET {{baseUrl}}/application/all
+Cookie: token=ADMIN_TOKEN_HERE
+
+### ========================================
+### 13. APPROVE/REJECT APPLICATION (ADMIN ONLY)
+### Replace APP_ID with actual application UUID
+POST {{baseUrl}}/application/APP_ID/approve
+Content-Type: application/json
+Cookie: token=ADMIN_TOKEN_HERE
+
+{
+  "status": "Approved"
+}
+
+### ========================================
+### NOTES
+### ========================================
+### 1. Replace newuser@gmail.com with your desired email
+### 2. Check your email or console for OTP (if using Mailtrap/Mock)
+### 3. Replace @userToken with actual token from login response
+### 4. Replace ADMIN_TOKEN_HERE with an admin user's token
+### 5. Replace APP_ID with real application UUID from database
+### 6. To use variables: Select line and press Ctrl+Alt+E (or use variable)
