@@ -2,10 +2,14 @@ import express from "express";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
+import campaignRoutes from "./routes/campaign.routes.js"; 
+import path from "path";
+import { fileURLToPath } from "url";
 import errorHandler from "./middlewares/globalErrorHandler.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+
 
 //Main server instance
 const app = express();
@@ -43,6 +47,10 @@ app.use(
 
 //Allow cookies
 app.use(cookieParser());
+//uploads
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /***************** ROUTING ****************/
 
@@ -62,6 +70,7 @@ app.use("/api/user", userRoutes);
 
 // Application Routes
 app.use("/api/application", applicationRoutes);
+app.use("/api/campaigns", campaignRoutes);
 
 /***************** ERROR HANDLING ****************/
 // Global Error Handler
