@@ -2,7 +2,7 @@ import express from "express";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
-import campaignRoutes from "./routes/campaign.routes.js"; 
+import campaignRoutes from "./routes/campaign.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import errorHandler from "./middlewares/globalErrorHandler.js";
