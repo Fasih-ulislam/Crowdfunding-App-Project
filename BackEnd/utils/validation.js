@@ -69,3 +69,14 @@ export const applicationApprovalSchema = Joi.object({
   status: Joi.string().valid("Approved", "Rejected").required(),
   reviewed_by: Joi.string().optional().allow(null, ""),
 }).unknown(false);
+
+// =====================================================
+// MILESTONE SCHEMAS
+// =====================================================
+
+export const milestoneSchema = Joi.object({
+  title: Joi.string().trim().required(),
+  description: Joi.string().trim().required(),
+  target_amount: Joi.number().positive().required(),
+  deadline: Joi.date().iso().required(),
+}).unknown(false);

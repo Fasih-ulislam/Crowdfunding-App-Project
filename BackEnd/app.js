@@ -3,6 +3,7 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
 import campaignRoutes from "./routes/campaign.routes.js";
+import milestoneRoutes from "./routes/milestone.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import errorHandler from "./middlewares/globalErrorHandler.js";
@@ -71,6 +72,7 @@ app.use("/api/user", userRoutes);
 // Application Routes
 app.use("/api/application", applicationRoutes);
 app.use("/api/campaigns", campaignRoutes);
+app.use("/api/milestones", milestoneRoutes);
 
 /***************** ERROR HANDLING ****************/
 // Global Error Handler
