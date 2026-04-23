@@ -4,16 +4,8 @@ import {
   authorizeRoles,
 } from "../middlewares/validate.user.middleware.js";
 import * as paymentController from "../controllers/payment.controller.js";
-import { handleStripeWebhook } from "../controllers/webhook.controller.js";
 
 const router = Router();
-
-// =====================================================
-// WEBHOOK — No auth, Stripe signs its own requests
-// =====================================================
-// NOTE: This route requires raw body — make sure the express.raw()
-// middleware is registered for this path in app.js BEFORE express.json()
-router.post("/webhook", handleStripeWebhook);
 
 // =====================================================
 // All routes below require authentication
