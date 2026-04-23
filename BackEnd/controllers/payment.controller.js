@@ -6,7 +6,7 @@ import {
   finalizeCreatorOnboarding,
 } from "../services/payment.service.js";
 import pool from "../config/database.js";
-import { ResponseError } from "../utils/customError.js";
+import ResponseError from "../utils/customError.js";
 
 // ─── Donation ─────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import stripe from "../config/stripe.js";
 import pool from "../config/database.js";
-import { ResponseError } from "../utils/customError.js";
+import ResponseError from "../utils/customError.js";
 
 // ─── Signature Verification ───────────────────────────────────────────────────
 
