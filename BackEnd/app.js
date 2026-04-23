@@ -12,18 +12,21 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import paymentRoutes from "./routes/payment.routes.js";
+import { handleStripeWebhook } from "./controllers/webhook.controller.js";
 
 //Main server instance
 const app = express();
 
-// Stripe webhooks need raw body for signature verification
-app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
-app.use((req, res, next) => {
-  if (req.body instanceof Buffer) {
-    req.rawBody = req.body;
-  }
-  next();
-});
+// Stripe webhook route must come BEFORE express.json()
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res, next) => {
+    req.rawBody = req.body; // raw buffer
+    next();
+  },
+  handleStripeWebhook,
+);
 
 /***************** MIDDLEWARES ****************/
 //Data format - limit payload size to prevent DoS
@@ -36,7 +39,7 @@ app.use(helmet());
 //CORS --> Restrict to allowed origins in production
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:3000", "http://localhost:5173"];
+  : ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:8080"];
 
 app.use(
   cors({

@@ -55,8 +55,8 @@ const handlePaymentSucceeded = async (paymentIntent) => {
     return;
   }
 
-  const donorId = parseInt(trustfund_user_id);
-  const milestoneId = parseInt(milestone_id);
+  const donorId = trustfund_user_id;
+  const milestoneId = milestone_id;
   const amount = paymentIntent.amount / 100; // convert cents back to dollars
   const stripePaymentId = paymentIntent.id; // pi_...
 
