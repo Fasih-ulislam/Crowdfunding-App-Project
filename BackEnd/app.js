@@ -12,13 +12,12 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import paymentRoutes from "./routes/payment.routes.js";
-app.use("/api/payments", paymentRoutes);
 
 //Main server instance
 const app = express();
 
 // Stripe webhooks need raw body for signature verification
-app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
+app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
 app.use((req, res, next) => {
   if (req.body instanceof Buffer) {
     req.rawBody = req.body;
@@ -78,14 +77,18 @@ app.use("/api/auth", authRoutes);
 // -------> Protected Routes <--------
 // Each route file handles its own authentication via authenticateUser middleware
 // User Routes
-app.use("/api/user", userRoutes);
+//app.use("/api/user", userRoutes);
 
 // Application Routes
 app.use("/api/application", applicationRoutes);
+//Campaign Routes
 app.use("/api/campaigns", campaignRoutes);
+//Milestones Routes
 app.use("/api/milestones", milestoneRoutes);
+// Votes Routes
 app.use("/api/votes", voteRoutes);
-
+//Payment Routes
+app.use("/api/payments", paymentRoutes);
 /***************** ERROR HANDLING ****************/
 // Global Error Handler
 app.use(errorHandler);
