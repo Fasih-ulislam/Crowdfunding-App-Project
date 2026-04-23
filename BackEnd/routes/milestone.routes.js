@@ -3,6 +3,7 @@ import {
   addMilestone,
   fetchCampaignMilestones,
   submitMilestoneForReview,
+  adminReviewMilestone,
 } from "../controllers/milestone.controller.js";
 import { authenticateUser, authorizeRoles } from "../middlewares/validate.user.middleware.js";
 
@@ -25,6 +26,14 @@ router.patch(
   authenticateUser,
   authorizeRoles("Creator"),
   submitMilestoneForReview
+);
+
+// Admin only route to approve or reject a pending milestone
+router.patch(
+  "/:id/review",
+  authenticateUser,
+  authorizeRoles("Admin"),
+  adminReviewMilestone
 );
 
 export default router;

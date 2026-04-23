@@ -1,6 +1,6 @@
 import * as milestoneService from "../services/milestone.service.js";
 import ResponseError from "../utils/customError.js";
-import { milestoneSchema } from "../utils/validation.js";
+import { milestoneSchema, milestoneReviewSchema } from "../utils/validation.js";
 
 export async function addMilestone(req, res, next) {
   try {
@@ -48,6 +48,26 @@ export async function submitMilestoneForReview(req, res, next) {
       message: "Milestone submitted for review",
       milestone
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function adminReviewMilestone(req, res, next) {
+  try {
+    const { error } = milestoneReviewSchema.validate(req.body);
+    if (error) throw new ResponseError(error.details[0].message, 400);
+
+    const milestoneId = req.params.id;
+    const { action } = req.body;
+
+    const milestone = await milestoneService.reviewMilestone(milestoneId, action);
+
+    const message = action === "approve"
+      ? "Milestone approved and is now Active"
+      : "Milestone rejected";
+
+    res.status(200).json({ message, milestone });
   } catch (err) {
     next(err);
   }

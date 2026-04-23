@@ -60,7 +60,7 @@ export async function getMilestonesByCampaign(campaignId) {
 export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
   // First, verify the milestone belongs to a campaign owned by the creator
   const checkResult = await pool.query(
-    `SELECT m.id FROM milestones m
+    `SELECT m.id, m.status FROM milestones m
      JOIN campaigns c ON m.campaign_id = c.id
      WHERE m.id = $1 AND c.creator_id = $2`,
     [milestoneId, creatorId]
@@ -70,9 +70,46 @@ export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
     throw new ResponseError("Milestone not found or you are not the campaign owner", 404);
   }
 
+  const currentStatus = checkResult.rows[0].status;
+  if (currentStatus !== "Active") {
+    throw new ResponseError(
+      `Cannot submit milestone for review. Milestone must be 'Active' (current status: '${currentStatus}')`,
+      400
+    );
+  }
+
   // Update status
   const updateResult = await pool.query(
     "UPDATE milestones SET status = $1 WHERE id = $2 RETURNING *",
+    [newStatus, milestoneId]
+  );
+
+  return updateResult.rows[0];
+}
+
+export async function reviewMilestone(milestoneId, action) {
+  const checkResult = await pool.query(
+    `SELECT id, status FROM milestones WHERE id = $1`,
+    [milestoneId]
+  );
+
+  if (checkResult.rows.length === 0) {
+    throw new ResponseError("Milestone not found", 404);
+  }
+
+  const currentStatus = checkResult.rows[0].status;
+
+  if (currentStatus !== "Pending") {
+    throw new ResponseError(
+      `Cannot review milestone. Milestone must be 'Pending' (current status: '${currentStatus}')`,
+      400
+    );
+  }
+
+  const newStatus = action === "approve" ? "Active" : "Rejected";
+
+  const updateResult = await pool.query(
+    `UPDATE milestones SET status = $1 WHERE id = $2 RETURNING *`,
     [newStatus, milestoneId]
   );
 
