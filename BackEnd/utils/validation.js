@@ -80,3 +80,11 @@ export const milestoneSchema = Joi.object({
   target_amount: Joi.number().positive().required(),
   deadline: Joi.date().iso().required(),
 }).unknown(false);
+
+// =====================================================
+// VOTING SCHEMAS
+// =====================================================
+
+export const voteSchema = Joi.object({
+  vote: Joi.boolean().required(),
+}).unknown(false);
