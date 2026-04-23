@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { castVote, getVoteResults } from "../controllers/vote.controller.js";
-import { authenticateUser } from "../middlewares/validate.user.middleware.js";
+import { authenticateUser, authorizeRoles } from "../middlewares/validate.user.middleware.js";
 
 const router = Router();
 
-// Public route to view vote results/status for a milestone
 router.get("/:milestoneId", getVoteResults);
 
-// Protected route for a donor to cast their vote
-router.post("/:milestoneId", authenticateUser, castVote);
+router.post("/:milestoneId", authenticateUser, (req, res, next) => {
+  console.log("User role:", req.user.role);
+  next();
+}, authorizeRoles("Donor"), castVote);
 
 export default router;
