@@ -10,10 +10,20 @@ import errorHandler from "./middlewares/globalErrorHandler.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-
+import paymentRoutes from "./routes/payment.routes.js";
+app.use("/api/payments", paymentRoutes);
 
 //Main server instance
 const app = express();
+
+// Stripe webhooks need raw body for signature verification
+app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
+app.use((req, res, next) => {
+  if (req.body instanceof Buffer) {
+    req.rawBody = req.body;
+  }
+  next();
+});
 
 /***************** MIDDLEWARES ****************/
 //Data format - limit payload size to prevent DoS
