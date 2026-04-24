@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustFund — Dev Test Panel</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #222;
+      --border: #2e2e2e;
+      --border2: #3a3a3a;
+      --text: #e8e8e8;
+      --muted: #888;
+      --accent: #00e5a0;
+      --accent-dim: rgba(0, 229, 160, 0.1);
+      --accent-border: rgba(0, 229, 160, 0.3);
+      --danger: #ff5555;
+      --danger-dim: rgba(255, 85, 85, 0.1);
+      --warn: #ffaa00;
+      --warn-dim: rgba(255, 170, 0, 0.1);
+      --info: #4d9fff;
+      --info-dim: rgba(77, 159, 255, 0.1);
+      --radius: 6px;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent-border);
+    }
+
+    .auth-status {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .auth-status span {
+      color: var(--accent);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 200px 1fr 280px;
+      min-height: calc(100vh - 53px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      position: sticky;
+      top: 53px;
+      height: calc(100vh - 53px);
+      overflow-y: auto;
+    }
+
+    .nav-section {
+      margin-bottom: 20px;
+    }
+
+    .nav-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0 16px;
+      margin-bottom: 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      transition: color 0.15s, background 0.15s;
+      font-family: var(--sans);
+    }
+
+    .nav-item:hover {
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .nav-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border2);
+      flex-shrink: 0;
+    }
+
+    .nav-item.active .nav-dot {
+      background: var(--accent);
+    }
+
+    /* Main content */
+    .main {
+      padding: 24px;
+      max-width: 680px;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .panel-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Forms */
+    .field {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      margin-bottom: 5px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    select option {
+      background: var(--surface2);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    btn,
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid;
+      transition: all 0.15s;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.85;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border-color: var(--border2);
+      color: var(--text);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-danger {
+      background: var(--danger-dim);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 85, 85, 0.2);
+    }
+
+    .btn-warn {
+      background: var(--warn-dim);
+      border-color: var(--warn);
+      color: var(--warn);
+    }
+
+    /* Stripe card element */
+    #stripe-card-element {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+
+    #stripe-card-element.focused {
+      border-color: var(--accent);
+    }
+
+    /* Log panel */
+    .log-panel {
+      border-left: 1px solid var(--border);
+      padding: 16px;
+      position: sticky;
+      top: 53px;
+      height: calc(100vh - 53px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .log-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .log-clear {
+      cursor: pointer;
+      color: var(--danger);
+      font-size: 10px;
+      background: none;
+      border: none;
+      font-family: var(--mono);
+    }
+
+    .log-entries {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .log-entry {
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.5;
+      border: 1px solid;
+    }
+
+    .log-entry.success {
+      background: var(--accent-dim);
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    .log-entry.error {
+      background: var(--danger-dim);
+      border-color: rgba(255, 85, 85, 0.3);
+      color: var(--danger);
+    }
+
+    .log-entry.info {
+      background: var(--info-dim);
+      border-color: rgba(77, 159, 255, 0.3);
+      color: var(--info);
+    }
+
+    .log-entry.warn {
+      background: var(--warn-dim);
+      border-color: rgba(255, 170, 0, 0.3);
+      color: var(--warn);
+    }
+
+    .log-time {
+      opacity: 0.6;
+      font-size: 10px;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .log-pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+      font-size: 10px;
+      margin-top: 4px;
+      opacity: 0.8;
+    }
+
+    /* State store display */
+    .state-store {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .state-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .state-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      font-family: var(--mono);
+      font-size: 11px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .state-key {
+      color: var(--muted);
+    }
+
+    .state-val {
+      color: var(--accent);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Info box */
+    .info-box {
+      background: var(--info-dim);
+      border: 1px solid rgba(77, 159, 255, 0.3);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--info);
+      margin-bottom: 16px;
+      font-family: var(--mono);
+      line-height: 1.6;
+    }
+
+    .warn-box {
+      background: var(--warn-dim);
+      border: 1px solid rgba(255, 170, 0, 0.3);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--warn);
+      margin-bottom: 16px;
+      font-family: var(--mono);
+      line-height: 1.6;
+    }
+
+    .section-gap {
+      margin-top: 24px;
+    }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* Result display */
+    .result-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 10px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .result-block.visible {
+      display: block;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Stripe test cards hint */
+    .cards-hint {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      line-height: 1.8;
+    }
+
+    .cards-hint strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <span class="logo">TRUSTFUND</span>
+    <span class="badge">DEV PANEL</span>
+    <span class="auth-status" id="header-status">not logged in</span>
+  </header>
+
+  <div class="layout">
+
+    <!-- Sidebar nav -->
+    <nav class="sidebar">
+      <div class="nav-section">
+        <div class="nav-label">Auth</div>
+        <button class="nav-item active" onclick="showPanel('login')">
+          <span class="nav-dot"></span>Login
+        </button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Campaign</div>
+        <button class="nav-item" onclick="showPanel('create-campaign')">
+          <span class="nav-dot"></span>Create campaign
+        </button>
+        <button class="nav-item" onclick="showPanel('create-milestone')">
+          <span class="nav-dot"></span>Create milestone
+        </button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Payments</div>
+        <button class="nav-item" onclick="showPanel('donate')">
+          <span class="nav-dot"></span>Donate
+        </button>
+        <button class="nav-item" onclick="showPanel('onboarding')">
+          <span class="nav-dot"></span>Creator onboarding
+        </button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Admin</div>
+        <button class="nav-item" onclick="showPanel('release')">
+          <span class="nav-dot"></span>Release escrow
+        </button>
+        <button class="nav-item" onclick="showPanel('refund')">
+          <span class="nav-dot"></span>Process refunds
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main panels -->
+    <main class="main">
+
+      <!-- LOGIN -->
+      <div class="panel active" id="panel-login">
+        <div class="panel-title">// auth — login</div>
+
+        <div class="field">
+          <label>email</label>
+          <input type="email" id="login-email" value="test@gmail.com" placeholder="user@example.com">
+        </div>
+        <div class="field">
+          <label>password</label>
+          <input type="password" id="login-password" value="Test@123">
+        </div>
+        <div class="field">
+          <label>active role</label>
+          <select id="login-role">
+            <option value="Donor">Donor</option>
+            <option value="Creator">Creator</option>
+            <option value="Admin">Admin</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()">Login</button>
+        <div class="result-block" id="login-result"></div>
+      </div>
+
+      <!-- CREATE CAMPAIGN -->
+      <div class="panel" id="panel-create-campaign">
+        <div class="panel-title">// campaign — create</div>
+        <div class="info-box">Requires Creator role. Login as Creator first.</div>
+
+        <div class="field">
+          <label>title</label>
+          <input type="text" id="camp-title" placeholder="My Campaign" value="Test Campaign Alpha">
+        </div>
+        <div class="field">
+          <label>description</label>
+          <textarea id="camp-desc">A test campaign for development purposes.</textarea>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>total goal (USD)</label>
+            <input type="number" id="camp-goal" value="1000" min="1">
+          </div>
+          <div class="field">
+            <label>category ID</label>
+            <select id="camp-category">
+              <option value="1">Health</option>
+              <option value="2">Education</option>
+              <option value="3">Technology</option>
+              <option value="4">Environment</option>
+              <option value="5">Community</option>
+              <option value="6">Arts</option>
+              <option value="7">Emergency Relief</option>
+              <option value="8">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>deadline</label>
+          <input type="date" id="camp-deadline" value="2026-12-31">
+        </div>
+        <button class="btn btn-primary" onclick="doCreateCampaign()">Create campaign</button>
+        <div class="result-block" id="campaign-result"></div>
+      </div>
+
+      <!-- CREATE MILESTONE -->
+      <div class="panel" id="panel-create-milestone">
+        <div class="panel-title">// milestone — create</div>
+        <div class="info-box">Requires Creator role. Campaign ID is auto-filled if you created one above.</div>
+
+        <div class="field">
+          <label>campaign ID</label>
+          <input type="text" id="ms-campaign-id" placeholder="uuid from campaign creation">
+        </div>
+        <div class="field">
+          <label>title</label>
+          <input type="text" id="ms-title" value="Milestone One — Prototype">
+        </div>
+        <div class="field">
+          <label>description</label>
+          <textarea id="ms-desc">Build and test initial prototype.</textarea>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>target amount (USD)</label>
+            <input type="number" id="ms-amount" value="500" min="1">
+          </div>
+          <div class="field">
+            <label>deadline</label>
+            <input type="date" id="ms-deadline" value="2026-09-30">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="doCreateMilestone()">Create milestone</button>
+
+        <hr class="divider">
+        <div class="panel-title">// milestone — activate</div>
+        <div class="warn-box">Donations only work on Active milestones. Activate it first.</div>
+        <div class="field">
+          <label>milestone ID to activate</label>
+          <input type="text" id="ms-activate-id" placeholder="auto-filled after creation">
+        </div>
+        <button class="btn btn-warn" onclick="doActivateMilestone()">Set milestone Active</button>
+        <div class="result-block" id="milestone-result"></div>
+      </div>
+
+      <!-- DONATE -->
+      <div class="panel" id="panel-donate">
+        <div class="panel-title">// payments — donate</div>
+        <div class="info-box">Requires Donor role. Uses Stripe test mode — no real money.</div>
+
+        <div class="cards-hint">
+          <strong>Test cards (Stripe test mode)</strong><br>
+          Success: 4242 4242 4242 4242<br>
+          Auth required: 4000 0025 0000 3155<br>
+          Decline: 4000 0000 0000 9995<br>
+          Expiry: any future date &nbsp;|&nbsp; CVC: any 3 digits
+        </div>
+
+        <div class="field">
+          <label>milestone ID</label>
+          <input type="text" id="donate-milestone-id" placeholder="auto-filled if you created one">
+        </div>
+        <div class="field">
+          <label>amount (USD)</label>
+          <input type="number" id="donate-amount" value="50" min="1">
+        </div>
+
+        <div class="field">
+          <label>card details</label>
+          <div id="stripe-card-element"></div>
+        </div>
+
+        <button class="btn btn-primary" id="donate-btn" onclick="doDonate()">Pay with Stripe</button>
+        <div id="donate-stripe-error"
+          style="color:var(--danger);font-size:12px;margin-top:8px;font-family:var(--mono);"></div>
+        <div class="result-block" id="donate-result"></div>
+      </div>
+
+      <!-- ONBOARDING -->
+      <div class="panel" id="panel-onboarding">
+        <div class="panel-title">// payments — creator onboarding</div>
+        <div class="info-box">Requires Creator role. Opens Stripe Connect onboarding in a new tab.</div>
+
+        <div class="warn-box">
+          Test bank details for Stripe Connect:<br>
+          Routing number: 110000000<br>
+          Account number: 000123456789
+        </div>
+
+        <button class="btn btn-primary" onclick="doStartOnboarding()">Generate onboarding link</button>
+        <div id="onboarding-link-area" style="margin-top:12px;display:none;">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:6px;">Stripe onboarding
+            URL:</div>
+          <a id="onboarding-url-link" href="#" target="_blank"
+            style="color:var(--accent);font-family:var(--mono);font-size:11px;word-break:break-all;"></a>
+        </div>
+
+        <hr class="divider">
+        <div class="panel-title">// payments — complete onboarding</div>
+        <div class="info-box">Call this after returning from Stripe onboarding page.</div>
+        <button class="btn btn-outline" onclick="doCompleteOnboarding()">Mark onboarding complete</button>
+        <div class="result-block" id="onboarding-result"></div>
+      </div>
+
+      <!-- RELEASE ESCROW -->
+      <div class="panel" id="panel-release">
+        <div class="panel-title">// admin — release escrow</div>
+        <div class="info-box">Requires Admin role. Only works after YES vote result on milestone.</div>
+
+        <div class="warn-box">
+          Prerequisites:<br>
+          1. Votes submitted on milestone<br>
+          2. CALL close_voting('milestone-id') in psql<br>
+          3. Vote outcome must be YES (yes_count > no_count)
+        </div>
+
+        <div class="field">
+          <label>milestone ID</label>
+          <input type="text" id="release-milestone-id" placeholder="milestone uuid">
+        </div>
+        <button class="btn btn-primary" onclick="doReleaseEscrow()">Release escrow → creator</button>
+        <div class="result-block" id="release-result"></div>
+      </div>
+
+      <!-- PROCESS REFUNDS -->
+      <div class="panel" id="panel-refund">
+        <div class="panel-title">// admin — process refunds</div>
+        <div class="info-box">Requires Admin role. Only works after NO vote result on milestone.</div>
+
+        <div class="warn-box">
+          Prerequisites:<br>
+          1. Votes submitted on milestone<br>
+          2. CALL close_voting('milestone-id') in psql<br>
+          3. Vote outcome must be NO (no_count >= yes_count)<br>
+          4. Pending refund rows must exist in DB
+        </div>
+
+        <div class="field">
+          <label>milestone ID</label>
+          <input type="text" id="refund-milestone-id" placeholder="milestone uuid">
+        </div>
+        <button class="btn btn-danger" onclick="doProcessRefunds()">Process all refunds</button>
+        <div class="result-block" id="refund-result"></div>
+      </div>
+
+    </main>
+
+    <!-- Log panel -->
+    <aside class="log-panel">
+      <div class="log-title">
+        <span>// request log</span>
+        <button class="log-clear" onclick="clearLog()">clear</button>
+      </div>
+      <div class="log-entries" id="log-entries">
+        <div class="log-entry info">
+          <span class="log-time">ready</span>
+          Panel loaded. Start by logging in.
+        </div>
+      </div>
+
+      <div class="state-store">
+        <div class="state-label">// state</div>
+        <div class="state-row"><span class="state-key">token</span><span class="state-val" id="st-token">—</span></div>
+        <div class="state-row"><span class="state-key">role</span><span class="state-val" id="st-role">—</span></div>
+        <div class="state-row"><span class="state-key">user_id</span><span class="state-val" id="st-userid">—</span>
+        </div>
+        <div class="state-row"><span class="state-key">campaign_id</span><span class="state-val"
+            id="st-campaignid">—</span></div>
+        <div class="state-row"><span class="state-key">milestone_id</span><span class="state-val"
+            id="st-milestoneid">—</span></div>
+        <div class="state-row"><span class="state-key">stripe_pk</span><span class="state-val" id="st-stripepk">—</span>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    const BASE = 'http://localhost:3000/api';
+
+    // ─── State ────────────────────────────────────────────────────────────────────
+    const state = {
+      token: null,
+      role: null,
+      userId: null,
+      campaignId: null,
+      milestoneId: null,
+      stripe: null,
+      cardElement: null,
+    };
+
+    // ─── Stripe init ──────────────────────────────────────────────────────────────
+    // Paste your Stripe publishable key here
+    const STRIPE_PK = 'pk_test_51TP3yHA8BjoMYgpPPHpGypi0WG8es7FnnOHS5oQyUYXbewbGoRFNwHXpezbvAJQ2YRLQVH7gTgy1k5D57WjdjDkP00RlNf2mJ8';
+
+    function initStripe() {
+      try {
+        state.stripe = Stripe(STRIPE_PK);
+        const elements = state.stripe.elements();
+        state.cardElement = elements.create('card', {
+          style: {
+            base: {
+              color: '#e8e8e8',
+              fontFamily: '"IBM Plex Mono", monospace',
+              fontSize: '13px',
+              '::placeholder': { color: '#555' },
+            },
+            invalid: { color: '#ff5555' },
+          },
+        });
+        state.cardElement.mount('#stripe-card-element');
+        state.cardElement.on('focus', () => {
+          document.getElementById('stripe-card-element').classList.add('focused');
+        });
+        state.cardElement.on('blur', () => {
+          document.getElementById('stripe-card-element').classList.remove('focused');
+        });
+        document.getElementById('st-stripepk').textContent = STRIPE_PK.slice(0, 14) + '...';
+        log('info', 'Stripe.js initialized');
+      } catch (e) {
+        log('error', 'Stripe init failed: ' + e.message);
+      }
+    }
+
+    // ─── Nav ──────────────────────────────────────────────────────────────────────
+    function showPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    // ─── Log ──────────────────────────────────────────────────────────────────────
+    function log(type, message, data) {
+      const entries = document.getElementById('log-entries');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      const now = new Date().toLocaleTimeString();
+      let html = `<span class="log-time">${now}</span>${message}`;
+      if (data) {
+        html += `<div class="log-pre">${JSON.stringify(data, null, 2)}</div>`;
+      }
+      entry.innerHTML = html;
+      entries.appendChild(entry);
+      entries.scrollTop = entries.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log-entries').innerHTML = '';
+    }
+
+    function showResult(id, data, ok) {
+      const el = document.getElementById(id);
+      el.textContent = JSON.stringify(data, null, 2);
+      el.className = 'result-block visible';
+      el.style.color = ok ? 'var(--accent)' : 'var(--danger)';
+    }
+
+    function updateState() {
+      document.getElementById('st-token').textContent = state.token ? state.token.slice(0, 16) + '...' : '—';
+      document.getElementById('st-role').textContent = state.role || '—';
+      document.getElementById('st-userid').textContent = state.userId ? state.userId.slice(0, 8) + '...' : '—';
+      document.getElementById('st-campaignid').textContent = state.campaignId ? state.campaignId.slice(0, 8) + '...' : '—';
+      document.getElementById('st-milestoneid').textContent = state.milestoneId ? state.milestoneId.slice(0, 8) + '...' : '—';
+      const hs = document.getElementById('header-status');
+      if (state.token) {
+        hs.innerHTML = `logged in as <span>${state.role}</span>`;
+      } else {
+        hs.textContent = 'not logged in';
+      }
+    }
+
+    // ─── API helper ───────────────────────────────────────────────────────────────
+    async function api(method, path, body, useToken = true) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (useToken && state.token) {
+        headers['Cookie'] = `token=${state.token}`;
+      }
+      const opts = { method, headers, credentials: 'include' };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(BASE + path, opts);
+      const data = await res.json().catch(() => ({ error: 'Non-JSON response' }));
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    // ─── Auth ─────────────────────────────────────────────────────────────────────
+    async function doLogin() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const activeRole = document.getElementById('login-role').value;
+
+      log('info', `Logging in as ${activeRole}...`);
+      try {
+        const { ok, data } = await api('POST', '/auth/login', { email, password, activeRole }, false);
+        if (ok) {
+          state.token = data.token || data.data?.token;
+          state.role = activeRole;
+          state.userId = data.user?.id || data.data?.user?.id;
+          updateState();
+          log('success', 'Login successful', { role: activeRole, userId: state.userId });
+          showResult('login-result', data, true);
+        } else {
+          log('error', 'Login failed', data);
+          showResult('login-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    // ─── Campaign ─────────────────────────────────────────────────────────────────
+    async function doCreateCampaign() {
+      const body = {
+        title: document.getElementById('camp-title').value,
+        description: document.getElementById('camp-desc').value,
+        total_goal: parseFloat(document.getElementById('camp-goal').value),
+        category_id: parseInt(document.getElementById('camp-category').value),
+        deadline: document.getElementById('camp-deadline').value,
+      };
+
+      log('info', 'Creating campaign...');
+      try {
+        const { ok, data } = await api('POST', '/campaigns', body);
+        if (ok) {
+          const id = data.data?.id || data.campaign?.id || data.id;
+          if (id) {
+            state.campaignId = id;
+            document.getElementById('ms-campaign-id').value = id;
+            updateState();
+          }
+          log('success', 'Campaign created', { id });
+          showResult('campaign-result', data, true);
+        } else {
+          log('error', 'Campaign creation failed', data);
+          showResult('campaign-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    // ─── Milestone ────────────────────────────────────────────────────────────────
+    async function doCreateMilestone() {
+      const campaignId = document.getElementById('ms-campaign-id').value;
+      if (!campaignId) { log('warn', 'Campaign ID required'); return; }
+
+      const body = {
+        title: document.getElementById('ms-title').value,
+        description: document.getElementById('ms-desc').value,
+        target_amount: parseFloat(document.getElementById('ms-amount').value),
+        deadline: document.getElementById('ms-deadline').value,
+      };
+
+      log('info', 'Creating milestone...');
+      try {
+        const { ok, data } = await api('POST', `/milestones/campaign/${campaignId}`, body);
+        if (ok) {
+          const id = data.data?.id || data.milestone?.id || data.id;
+          if (id) {
+            state.milestoneId = id;
+            document.getElementById('ms-activate-id').value = id;
+            document.getElementById('donate-milestone-id').value = id;
+            document.getElementById('release-milestone-id').value = id;
+            document.getElementById('refund-milestone-id').value = id;
+            updateState();
+          }
+          log('success', 'Milestone created', { id });
+          showResult('milestone-result', data, true);
+        } else {
+          log('error', 'Milestone creation failed', data);
+          showResult('milestone-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    async function doActivateMilestone() {
+      const milestoneId = document.getElementById('ms-activate-id').value;
+      if (!milestoneId) { log('warn', 'Milestone ID required'); return; }
+
+      log('info', 'Activating milestone...');
+      try {
+        const { ok, data } = await api('PATCH', `/milestones/${milestoneId}/status`, { status: 'Active' });
+        if (ok) {
+          log('success', 'Milestone activated — ready for donations');
+          showResult('milestone-result', data, true);
+        } else {
+          log('error', 'Activation failed — check your milestone status endpoint path', data);
+          showResult('milestone-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    // ─── Donate ───────────────────────────────────────────────────────────────────
+    async function doDonate() {
+      const milestoneId = document.getElementById('donate-milestone-id').value;
+      const amount = parseFloat(document.getElementById('donate-amount').value);
+      const errEl = document.getElementById('donate-stripe-error');
+      errEl.textContent = '';
+
+      if (!milestoneId) { log('warn', 'Milestone ID required'); return; }
+      if (!state.stripe || !state.cardElement) { log('error', 'Stripe not initialized — check your PK'); return; }
+
+      const btn = document.getElementById('donate-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Processing...';
+
+      log('info', `Initiating donation — $${amount} to milestone ${milestoneId.slice(0, 8)}...`);
+
+      try {
+        // Step 1: Create PaymentIntent on backend
+        const { ok, data } = await api('POST', '/payments/donate', { milestone_id: milestoneId, amount });
+
+        if (!ok) {
+          log('error', 'PaymentIntent creation failed', data);
+          showResult('donate-result', data, false);
+          btn.disabled = false;
+          btn.innerHTML = 'Pay with Stripe';
+          return;
+        }
+
+        const { clientSecret } = data;
+        log('info', 'PaymentIntent created, confirming with Stripe...');
+
+        // Step 2: Confirm payment with Stripe.js (card never hits your server)
+        const { error, paymentIntent } = await state.stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: state.cardElement },
+        });
+
+        if (error) {
+          errEl.textContent = error.message;
+          log('error', 'Stripe confirmation failed: ' + error.message);
+          showResult('donate-result', { error: error.message }, false);
+        } else if (paymentIntent.status === 'succeeded') {
+          log('success', 'Payment succeeded! Webhook will insert donation row.', {
+            paymentIntentId: paymentIntent.id,
+            amount: `$${amount}`,
+          });
+          showResult('donate-result', {
+            status: 'succeeded',
+            paymentIntentId: paymentIntent.id,
+            note: 'Check your Stripe CLI output for webhook delivery',
+          }, true);
+        }
+      } catch (e) {
+        log('error', 'Unexpected error: ' + e.message);
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = 'Pay with Stripe';
+    }
+
+    // ─── Onboarding ───────────────────────────────────────────────────────────────
+    async function doStartOnboarding() {
+      log('info', 'Generating Connect onboarding link...');
+      try {
+        const { ok, data } = await api('POST', '/payments/onboarding/start');
+        if (ok) {
+          const url = data.onboardingUrl;
+          const area = document.getElementById('onboarding-link-area');
+          const link = document.getElementById('onboarding-url-link');
+          link.href = url;
+          link.textContent = url;
+          area.style.display = 'block';
+          log('success', 'Onboarding link generated — open it to complete Stripe Connect setup', { url });
+          showResult('onboarding-result', data, true);
+        } else {
+          log('error', 'Onboarding link failed', data);
+          showResult('onboarding-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    async function doCompleteOnboarding() {
+      log('info', 'Verifying onboarding completion with Stripe...');
+      try {
+        const { ok, data } = await api('POST', '/payments/onboarding/complete');
+        if (ok) {
+          log('success', 'Onboarding complete — payout_setup = true');
+          showResult('onboarding-result', data, true);
+        } else {
+          log('error', 'Onboarding completion failed', data);
+          showResult('onboarding-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    // ─── Release escrow ───────────────────────────────────────────────────────────
+    async function doReleaseEscrow() {
+      const id = document.getElementById('release-milestone-id').value;
+      if (!id) { log('warn', 'Milestone ID required'); return; }
+
+      log('info', `Releasing escrow for milestone ${id.slice(0, 8)}...`);
+      try {
+        const { ok, data } = await api('POST', `/payments/release/${id}`);
+        if (ok) {
+          log('success', 'Escrow released — funds transferred to creator', data);
+          showResult('release-result', data, true);
+        } else {
+          log('error', 'Release failed', data);
+          showResult('release-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    // ─── Process refunds ──────────────────────────────────────────────────────────
+    async function doProcessRefunds() {
+      const id = document.getElementById('refund-milestone-id').value;
+      if (!id) { log('warn', 'Milestone ID required'); return; }
+
+      log('warn', `Processing refunds for milestone ${id.slice(0, 8)}...`);
+      try {
+        const { ok, data } = await api('POST', `/payments/refund/${id}`);
+        if (ok) {
+          const failed = data.failed || 0;
+          if (failed > 0) {
+            log('warn', `Refunds processed with ${failed} failure(s)`, data);
+          } else {
+            log('success', 'All refunds processed successfully', data);
+          }
+          showResult('refund-result', data, ok);
+        } else {
+          log('error', 'Refund processing failed', data);
+          showResult('refund-result', data, false);
+        }
+      } catch (e) {
+        log('error', 'Network error: ' + e.message);
+      }
+    }
+
+    // ─── Init ─────────────────────────────────────────────────────────────────────
+    initStripe();
+    updateState();
+  </script>
+</body>
+
+</html>

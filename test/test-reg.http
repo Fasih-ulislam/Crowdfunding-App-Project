@@ -13,7 +13,7 @@ POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "email": "newuser@gmail.com",
+  "email": "creator@gmail.com",
   "password": "Test@123"
 }
 
@@ -25,8 +25,8 @@ POST {{baseUrl}}/auth/verify-otp
 Content-Type: application/json
 
 {
-  "email": "newuser@gmail.com",
-  "otp": "123456"
+  "email": "creator@gmail.com",
+  "otp": "251381"
 }
 
 ### ========================================
