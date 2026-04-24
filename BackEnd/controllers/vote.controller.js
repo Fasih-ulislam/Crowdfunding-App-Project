@@ -46,3 +46,19 @@ export async function getVoteResults(req, res, next) {
     next(err);
   }
 }
+
+export async function fetchLiveVotes(req, res, next) {
+  try {
+    const milestoneId = req.params.milestoneId;
+
+    const result = await voteService.getLiveVoteCounts(milestoneId);
+
+    if (result.error) {
+      return res.status(result.status).json({ message: result.error });
+    }
+
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}

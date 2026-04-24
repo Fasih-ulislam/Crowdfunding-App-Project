@@ -81,6 +81,10 @@ export const milestoneSchema = Joi.object({
   deadline: Joi.date().iso().required(),
 }).unknown(false);
 
+export const milestoneReviewSchema = Joi.object({
+  action: Joi.string().valid("approve", "reject").required(),
+}).unknown(false);
+
 // =====================================================
 // VOTING SCHEMAS
 // =====================================================
