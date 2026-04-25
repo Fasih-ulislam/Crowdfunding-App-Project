@@ -1,6 +1,7 @@
 import * as milestoneService from "../services/milestone.service.js";
 import ResponseError from "../utils/customError.js";
 import { milestoneSchema, milestoneReviewSchema } from "../utils/validation.js";
+import { queueNotificationJob } from "../services/queueService.js";
 
 export async function addMilestone(req, res, next) {
   try {
@@ -68,6 +69,14 @@ export async function adminReviewMilestone(req, res, next) {
       : "Milestone rejected";
 
     res.status(200).json({ message, milestone });
+
+    // Queue background notification & email for the creator
+    await queueNotificationJob("MILESTONE_UPDATED", {
+      userId: milestone.creator_id,
+      type: "MILESTONE_UPDATED",
+      message: `Your milestone "${milestone.title}" has been ${action}d.`,
+      metadata: { milestoneId: milestone.id, status: milestone.status },
+    });
   } catch (err) {
     next(err);
   }

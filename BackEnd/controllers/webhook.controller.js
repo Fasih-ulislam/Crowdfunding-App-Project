@@ -1,6 +1,7 @@
 import stripe from "../config/stripe.js";
 import pool from "../config/database.js";
 import ResponseError from "../utils/customError.js";
+import { queueNotificationJob } from "../services/queueService.js";
 
 // ─── Signature Verification ───────────────────────────────────────────────────
 
@@ -102,6 +103,14 @@ const handlePaymentSucceeded = async (paymentIntent) => {
   console.log(
     `Donation inserted: donor=${donorId}, milestone=${milestoneId}, amount=${amount}`,
   );
+
+  // Queue background notification & email
+  await queueNotificationJob("DONATION_RECEIVED", {
+    userId: donorId,
+    type: "DONATION_RECEIVED",
+    message: `Thank you! Your donation of $${amount} was successful.`,
+    metadata: { amount, milestoneId, stripePaymentId },
+  });
 };
 
 /**

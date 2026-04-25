@@ -109,7 +109,11 @@ export async function reviewMilestone(milestoneId, action) {
   const newStatus = action === "approve" ? "Active" : "Rejected";
 
   const updateResult = await pool.query(
-    `UPDATE milestones SET status = $1 WHERE id = $2 RETURNING *`,
+    `UPDATE milestones m
+     SET status = $1 
+     FROM campaigns c
+     WHERE m.campaign_id = c.id AND m.id = $2
+     RETURNING m.*, c.creator_id`,
     [newStatus, milestoneId]
   );
 
