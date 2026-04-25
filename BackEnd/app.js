@@ -5,6 +5,7 @@ import applicationRoutes from "./routes/application.routes.js";
 import campaignRoutes from "./routes/campaign.routes.js";
 import milestoneRoutes from "./routes/milestone.routes.js";
 import voteRoutes from "./routes/vote.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import errorHandler from "./middlewares/globalErrorHandler.js";
@@ -90,6 +91,8 @@ app.use("/api/campaigns", campaignRoutes);
 app.use("/api/milestones", milestoneRoutes);
 // Votes Routes
 app.use("/api/votes", voteRoutes);
+// Notifications Routes
+app.use("/api/notifications", notificationRoutes);
 //Payment Routes
 app.use("/api/payments", paymentRoutes);
 /***************** ERROR HANDLING ****************/
