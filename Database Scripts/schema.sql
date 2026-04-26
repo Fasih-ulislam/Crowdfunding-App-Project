@@ -238,17 +238,6 @@ CREATE TABLE vote_results (
 -- 7. NOTIFICATIONS
 -- =============================================================
 
-CREATE TABLE notifications (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type            VARCHAR(50) NOT NULL,
-    title           VARCHAR(255) NOT NULL,
-    message         TEXT        NOT NULL,
-    is_read         BOOLEAN     NOT NULL DEFAULT FALSE,
-    email_sent      BOOLEAN     NOT NULL DEFAULT FALSE,
-    failed_attempts INTEGER     NOT NULL DEFAULT 0,
-    created_at      TIMESTAMP   NOT NULL DEFAULT NOW()
-);
 
 -- =============================================================
 -- 8. INDEXES
@@ -326,12 +315,6 @@ BEGIN
     INSERT INTO transactions (type, reference_id, reference_type, amount)
     VALUES ('Fee', NEW.id, 'donations', v_fee_amt);
 
-    -- Notify Creator
-    INSERT INTO notifications (user_id, type, title, message)
-    SELECT c.creator_id, 'NewDonation', 'New Donation Received', 
-           'You received a donation of $' || NEW.amount || ' for your milestone: ' || m.title || '.'
-    FROM milestones m JOIN campaigns c ON c.id = m.campaign_id WHERE m.id = NEW.milestone_id;
-
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -355,10 +338,6 @@ BEGIN
         INSERT INTO creator_profiles (user_id, application_id)
         VALUES (NEW.user_id, NEW.id)
         ON CONFLICT (user_id) DO NOTHING;
-
-        -- Notify User
-        INSERT INTO notifications (user_id, type, title, message)
-        VALUES (NEW.user_id, 'ProfileApproved', 'Creator Application Approved', 'Congratulations! Your application to become a creator has been approved.');
     END IF;
 
     RETURN NEW;
@@ -441,18 +420,6 @@ BEGIN
             WHERE m.id = NEW.milestone_id
         );
 
-        -- Notify Creator
-        INSERT INTO notifications (user_id, type, title, message)
-        SELECT c.creator_id, 'MilestoneApproved', 'Milestone Approved', 
-               'Your milestone was approved by donors. Yes: ' || NEW.yes_count || ', No: ' || NEW.no_count || '.'
-        FROM milestones m JOIN campaigns c ON c.id = m.campaign_id WHERE m.id = NEW.milestone_id;
-
-        -- Notify Donors
-        INSERT INTO notifications (user_id, type, title, message)
-        SELECT DISTINCT d.donor_id, 'VoteOutcome', 'Milestone Approved',
-               'The milestone you backed was approved. Funds have been released. Yes: ' || NEW.yes_count || ', No: ' || NEW.no_count || '.'
-        FROM donations d WHERE d.milestone_id = NEW.milestone_id;
-
     ELSE
         -- Mark escrow for refund
         UPDATE escrow_accounts
@@ -482,18 +449,6 @@ BEGIN
             JOIN campaigns c ON c.id = m.campaign_id
             WHERE m.id = NEW.milestone_id
         );
-
-        -- Notify Creator
-        INSERT INTO notifications (user_id, type, title, message)
-        SELECT c.creator_id, 'MilestoneRejected', 'Milestone Rejected', 
-               'Your milestone was rejected by donors. Yes: ' || NEW.yes_count || ', No: ' || NEW.no_count || '.'
-        FROM milestones m JOIN campaigns c ON c.id = m.campaign_id WHERE m.id = NEW.milestone_id;
-
-        -- Notify Donors
-        INSERT INTO notifications (user_id, type, title, message)
-        SELECT DISTINCT d.donor_id, 'VoteOutcome', 'Milestone Rejected',
-               'The milestone you backed was rejected. A refund will be processed shortly. Yes: ' || NEW.yes_count || ', No: ' || NEW.no_count || '.'
-        FROM donations d WHERE d.milestone_id = NEW.milestone_id;
     END IF;
 
     RETURN NEW;
@@ -541,14 +496,8 @@ FOR EACH ROW EXECUTE FUNCTION fn_update_campaign_timestamp();
 CREATE OR REPLACE FUNCTION fn_on_milestone_status_updated()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.status = 'UnderReview' AND OLD.status != 'UnderReview' THEN
-        -- Notify all donors
-        INSERT INTO notifications (user_id, type, title, message)
-        SELECT DISTINCT d.donor_id, 'VotingOpened', 'Milestone Voting Opened',
-               'The milestone "' || NEW.title || '" is ready for review. You have 24 hours to cast your vote.'
-        FROM donations d WHERE d.milestone_id = NEW.id;
-    END IF;
-
+    -- This trigger now only serves as a placeholder or can be removed 
+    -- if we handle notifications in Node.js
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
