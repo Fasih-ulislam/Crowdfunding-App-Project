@@ -72,6 +72,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // -------> Health Check <--------
 app.get("/health-check", (req, res) => {
   res.status(200).json("OK");
+  console.log("server working");
 });
 
 // -------> Public Routes <--------
