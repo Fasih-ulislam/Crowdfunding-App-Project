@@ -1,0 +1,80 @@
+services:
+  # ── PostgreSQL Master (primary — handles all writes) ──────────────────────
+  pg-master:
+    image: postgres:16
+    container_name: trustfund-pg-master
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    ports:
+      - "5433:5432" # exposed on 5433 so it doesn't clash with your local postgres
+    volumes:
+      - pg_master_data:/var/lib/postgresql/data
+      - ./docker/pg/master.conf:/etc/postgresql/postgresql.conf
+      - ./docker/pg/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql # auto-runs on first start
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf
+    networks:
+      - trustfund-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── PostgreSQL Replica (slave — handles all reads) ────────────────────────
+  pg-replica:
+    image: postgres:16
+    container_name: trustfund-pg-replica
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+      PGPASSWORD: ${PG_PASSWORD} # needed for pg_basebackup
+    ports:
+      - "5434:5432" # exposed on 5434
+    volumes:
+      - pg_replica_data:/var/lib/postgresql/data
+      - ./docker/pg/replica.conf:/etc/postgresql/postgresql.conf
+      - ./docker/pg/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./docker/pg/init-replica.sh:/init-replica.sh
+    command: >
+      bash -c "
+        chmod +x /init-replica.sh &&
+        chown postgres:postgres /init-replica.sh &&
+        su -c '/init-replica.sh' postgres &&
+        su -c 'postgres -c config_file=/etc/postgresql/postgresql.conf -c hba_file=/etc/postgresql/pg_hba.conf' postgres
+      "
+    depends_on:
+      pg-master:
+        condition: service_healthy
+    networks:
+      - trustfund-net
+
+  # ── Nginx (reverse proxy + load balancer across 2 Node instances) ─────────
+  nginx:
+    image: nginx:alpine
+    container_name: trustfund-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - pg-master
+      - pg-replica
+    networks:
+      - trustfund-net
+
+volumes:
+  pg_master_data:
+  pg_replica_data:
+
+networks:
+  trustfund-net:
+    driver: bridge

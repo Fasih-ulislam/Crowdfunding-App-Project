@@ -1,17 +1,19 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 const connectMongoDB = async () => {
   try {
-    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/trustfund_notifications';
+    const mongoURI =
+      process.env.MONGO_URI ||
+      "mongodb://localhost:27017/trustfund_notifications";
 
     await mongoose.connect(mongoURI);
 
-    console.log('MongoDB connected successfully');
+    console.log("MongoDB connected successfully");
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error("MongoDB connection error:", error);
     process.exit(1);
   }
 };
