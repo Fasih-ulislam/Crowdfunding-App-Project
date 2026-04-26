@@ -49,6 +49,17 @@ export async function submitMilestoneForReview(req, res, next) {
       message: "Milestone submitted for review",
       milestone
     });
+
+    // Notify all donors that voting has opened
+    const donors = await milestoneService.getMilestoneDonors(milestoneId);
+    for (const donorId of donors) {
+      await queueNotificationJob("VOTING_OPENED", {
+        userId: donorId,
+        type: "SYSTEM_ALERT",
+        message: `The milestone "${milestone.title}" is ready for review. You have 24 hours to cast your vote.`,
+        metadata: { milestoneId: milestone.id },
+      });
+    }
   } catch (err) {
     next(err);
   }

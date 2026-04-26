@@ -119,3 +119,11 @@ export async function reviewMilestone(milestoneId, action) {
 
   return updateResult.rows[0];
 }
+
+export async function getMilestoneDonors(milestoneId) {
+  const result = await pool.query(
+    "SELECT DISTINCT donor_id FROM donations WHERE milestone_id = $1",
+    [milestoneId]
+  );
+  return result.rows.map(row => row.donor_id);
+}

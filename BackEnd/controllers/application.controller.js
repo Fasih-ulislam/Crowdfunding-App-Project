@@ -1,6 +1,7 @@
 import * as applicationService from "../services/application.service.js";
 import { applicationSchema, applicationApprovalSchema } from "../utils/validation.js";
 import ResponseError from "../utils/customError.js";
+import { queueNotificationJob } from "../services/queueService.js";
 
 // 🟩 Submit a new application
 export async function submitApplication(req, res, next) {
@@ -51,6 +52,14 @@ export async function approveOrRejectApplication(req, res, next) {
     );
     if (!application) throw new ResponseError("Application doesn't exist", 404);
     res.json({ message: "Application updated successfully", application });
+
+    // Queue notification
+    await queueNotificationJob("ROLE_APPLICATION_UPDATED", {
+      userId: application.user_id,
+      type: "SYSTEM_ALERT",
+      message: `Your creator application has been ${req.body.status}.`,
+      metadata: { status: req.body.status },
+    });
   } catch (err) {
     next(err);
   }

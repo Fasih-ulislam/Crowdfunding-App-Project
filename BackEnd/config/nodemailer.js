@@ -5,8 +5,8 @@ export const transporter = nodemailer.createTransport({
   port: 587, // TLS port
   secure: false, // true for 465, false for 587
   auth: {
-    user: process.env.SMTP_USER, // your Gmail or SMTP user
-    pass: process.env.SMTP_PASS, // app password (not your real Gmail password)
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
   },
 });
 

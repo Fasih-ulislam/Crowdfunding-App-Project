@@ -1,50 +1,64 @@
 import cron from "node-cron";
 import pool from "../config/database.js";
-import { sendEmail } from "./email.service.js";
+import { queueNotificationJob } from "../services/queueService.js";
 
 export function startCronJobs() {
+  // Check for milestones that have been in UnderReview for 24 hours
   cron.schedule("* * * * *", async () => {
     try {
       const { rows } = await pool.query(
-        `SELECT id FROM milestones
-         WHERE status = $1
-         AND created_at <= NOW() - INTERVAL '24 hours'`,
+        `SELECT m.id, m.title, c.creator_id 
+         FROM milestones m
+         JOIN campaigns c ON c.id = m.campaign_id
+         WHERE m.status = $1
+         AND m.created_at <= NOW() - INTERVAL '24 hours'`,
         ["UnderReview"]
       );
 
       for (const milestone of rows) {
+        // 1. Close voting in PostgreSQL
         await pool.query(`CALL close_voting($1)`, [milestone.id]);
-        console.log(`Closed voting for milestone: ${milestone.id}`);
+
+        // 2. Fetch the outcome
+        const { rows: resultRows } = await pool.query(
+          `SELECT yes_count, no_count, outcome FROM vote_results WHERE milestone_id = $1`,
+          [milestone.id]
+        );
+
+        if (resultRows.length > 0) {
+          const { yes_count, no_count, outcome } = resultRows[0];
+          const statusText = outcome ? "Approved" : "Rejected";
+
+          // 3. Notify Creator
+          await queueNotificationJob("MILESTONE_VOTE_RESULT", {
+            userId: milestone.creator_id,
+            type: "SYSTEM_ALERT",
+            message: `Voting closed for your milestone "${milestone.title}". Outcome: ${statusText}. (Yes: ${yes_count}, No: ${no_count})`,
+            metadata: { milestoneId: milestone.id, outcome, yes_count, no_count },
+          });
+
+          // 4. Notify all Donors
+          const { rows: donorRows } = await pool.query(
+            "SELECT DISTINCT donor_id FROM donations WHERE milestone_id = $1",
+            [milestone.id]
+          );
+
+          for (const donor of donorRows) {
+            await queueNotificationJob("MILESTONE_VOTE_RESULT", {
+              userId: donor.donor_id,
+              type: "SYSTEM_ALERT",
+              message: `Voting has closed for milestone "${milestone.title}". The funds have been ${outcome ? 'released' : 'marked for refund'}.`,
+              metadata: { milestoneId: milestone.id, outcome },
+            });
+          }
+        }
+
+        console.log(`Closed voting and sent notifications for milestone: ${milestone.id}`);
       }
     } catch (err) {
       console.error("Cron job error:", err.message);
     }
   });
 
-  // Email Notification Worker
-  setInterval(async () => {
-    try {
-      const { rows } = await pool.query(
-        `SELECT n.*, u.email
-         FROM notifications n
-         JOIN users u ON u.id = n.user_id
-         WHERE n.email_sent = FALSE AND n.failed_attempts < 3
-         ORDER BY n.created_at ASC
-         LIMIT 50`
-      );
-
-      for (const notification of rows) {
-        try {
-          await sendEmail(notification.email, notification.title, notification.message);
-          await pool.query(`UPDATE notifications SET email_sent = TRUE WHERE id = $1`, [notification.id]);
-        } catch (emailErr) {
-          await pool.query(`UPDATE notifications SET failed_attempts = failed_attempts + 1 WHERE id = $1`, [notification.id]);
-        }
-      }
-    } catch (err) {
-      console.error("Email worker error:", err.message);
-    }
-  }, 10000); // Run every 10 seconds
-
-  console.log("Cron jobs and workers started...");
+  console.log("Cron jobs started...");
 }

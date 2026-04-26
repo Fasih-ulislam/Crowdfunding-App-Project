@@ -2,9 +2,7 @@ import { Worker } from 'bullmq';
 import nodemailer from 'nodemailer';
 import redisConnection from '../config/redis.js';
 import Notification from '../models/Notification.js';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import pool from '../config/database.js';
 
 // Configure NodeMailer transporter (using mock configuration for now)
 const transporter = nodemailer.createTransport({
@@ -22,9 +20,12 @@ const processJob = async (job) => {
 
   try {
     // 1. Fetch User Data from PostgreSQL
-    const user = await prisma.users.findUnique({
-      where: { id: userId },
-    });
+    const { rows: userRows } = await pool.query(
+      "SELECT email FROM users WHERE id = $1",
+      [userId]
+    );
+
+    const user = userRows[0];
 
     if (!user) {
       throw new Error(`User ${userId} not found in PostgreSQL`);
