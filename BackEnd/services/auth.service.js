@@ -1,4 +1,4 @@
-import pool from "../config/database.js";
+import writePool, { readPool } from "../config/database.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import ResponseError from "../utils/customError.js";
@@ -26,7 +26,7 @@ async function sendOtpEmail(email, otp) {
 // ─────────────────────────────────────────────────────────────
 export async function loginUser({ email, password, activeRole }) {
   // Get user
-  const { rows } = await pool.query(`SELECT * FROM users WHERE email = $1`, [
+  const { rows } = await readPool.query(`SELECT * FROM users WHERE email = $1`, [
     email,
   ]);
 
@@ -38,7 +38,7 @@ export async function loginUser({ email, password, activeRole }) {
     throw new ResponseError("Invalid Credentials", 401);
 
   // Verify user actually has the requested role
-  const { rows: roleRows } = await pool.query(
+  const { rows: roleRows } = await readPool.query(
     `SELECT r.name
      FROM user_roles ur
      JOIN roles r ON ur.role_id = r.id
@@ -57,7 +57,7 @@ export async function loginUser({ email, password, activeRole }) {
 // ─────────────────────────────────────────────────────────────
 export async function registerUser({ email, password }) {
   // Check if already a verified user
-  const { rows: existing } = await pool.query(
+  const { rows: existing } = await readPool.query(
     `SELECT id FROM users WHERE email = $1`,
     [email],
   );
@@ -70,7 +70,7 @@ export async function registerUser({ email, password }) {
   console.log(otp);
 
   // Atomic: delete old pending + insert new pending
-  const client = await pool.connect();
+  const client = await writePool.connect();
   try {
     await client.query("BEGIN");
 
@@ -99,7 +99,7 @@ export async function registerUser({ email, password }) {
 // 🟩 VERIFY OTP
 // ─────────────────────────────────────────────────────────────
 export async function verifyOtp({ email, otp }) {
-  const { rows } = await pool.query(
+  const { rows } = await readPool.query(
     `SELECT * FROM pending_users WHERE email = $1`,
     [email],
   );
@@ -109,7 +109,7 @@ export async function verifyOtp({ email, otp }) {
 
   // Check expiry
   if (new Date() > new Date(pendingUser.otp_expires_at)) {
-    await pool.query(`DELETE FROM pending_users WHERE email = $1`, [email]);
+    await writePool.query(`DELETE FROM pending_users WHERE email = $1`, [email]);
     throw new ResponseError("OTP expired. Please register again.", 401);
   }
 
@@ -122,7 +122,7 @@ export async function verifyOtp({ email, otp }) {
 
   // Atomic: create user + delete pending
   // DB trigger auto-creates user_profile + assigns Donor role on INSERT
-  const client = await pool.connect();
+  const client = await writePool.connect();
   try {
     await client.query("BEGIN");
 

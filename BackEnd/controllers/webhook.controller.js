@@ -1,5 +1,5 @@
 import stripe from "../config/stripe.js";
-import pool from "../config/database.js";
+import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
 import { queueNotificationJob } from "../services/queueService.js";
 
@@ -62,7 +62,7 @@ const handlePaymentSucceeded = async (paymentIntent) => {
   const stripePaymentId = paymentIntent.id; // pi_...
 
   // Check for duplicate — Stripe can retry webhooks, so be idempotent
-  const { rows: existing } = await pool.query(
+  const { rows: existing } = await readPool.query(
     `SELECT id FROM donations WHERE stripe_payment_id = $1`,
     [stripePaymentId],
   );
@@ -75,7 +75,7 @@ const handlePaymentSucceeded = async (paymentIntent) => {
   }
 
   // Verify milestone exists and is Active
-  const { rows: milestoneRows } = await pool.query(
+  const { rows: milestoneRows } = await readPool.query(
     `SELECT id, status FROM milestones WHERE id = $1`,
     [milestoneId],
   );
@@ -94,7 +94,7 @@ const handlePaymentSucceeded = async (paymentIntent) => {
   }
 
   // Insert donation — trigger fires from here
-  await pool.query(
+  await writePool.query(
     `INSERT INTO donations (donor_id, milestone_id, amount, stripe_payment_id)
      VALUES ($1, $2, $3, $4)`,
     [donorId, milestoneId, amount, stripePaymentId],
@@ -139,7 +139,7 @@ const handleAccountUpdated = async (account) => {
   }
 
   // Only update if not already marked as set up — avoid redundant writes
-  await pool.query(
+  await writePool.query(
     `UPDATE creator_profiles
      SET payout_setup = true
      WHERE user_id = $1 AND payout_setup = false`,

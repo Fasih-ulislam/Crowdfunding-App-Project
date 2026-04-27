@@ -1,5 +1,5 @@
 import stripe from "../config/stripe.js";
-import pool from "../config/database.js";
+import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
 
 // ─── Customer ─────────────────────────────────────────────────────────────────
@@ -9,7 +9,7 @@ import ResponseError from "../utils/customError.js";
  * If none exists, creates a new Stripe Customer and saves the ID.
  */
 const getOrCreateCustomer = async (userId, email, displayName) => {
-  const { rows } = await pool.query(
+  const { rows } = await readPool.query(
     `SELECT stripe_customer_id FROM users WHERE id = $1`,
     [userId],
   );
@@ -28,7 +28,7 @@ const getOrCreateCustomer = async (userId, email, displayName) => {
   });
 
   // Save to DB
-  await pool.query(`UPDATE users SET stripe_customer_id = $1 WHERE id = $2`, [
+  await writePool.query(`UPDATE users SET stripe_customer_id = $1 WHERE id = $2`, [
     customer.id,
     userId,
   ]);
@@ -138,7 +138,7 @@ const createConnectOnboardingLink = async ({ userId, stripeAccountId }) => {
     accountId = account.id;
 
     // Persist immediately — don't wait for onboarding to complete
-    await pool.query(
+    await writePool.query(
       `UPDATE creator_profiles SET stripe_account_id = $1 WHERE user_id = $2`,
       [accountId, userId],
     );
@@ -160,7 +160,7 @@ const createConnectOnboardingLink = async ({ userId, stripeAccountId }) => {
  */
 const finalizeCreatorOnboarding = async (userId) => {
   // Verify with Stripe that the account actually completed onboarding
-  const { rows } = await pool.query(
+  const { rows } = await readPool.query(
     `SELECT stripe_account_id FROM creator_profiles WHERE user_id = $1`,
     [userId],
   );
@@ -176,7 +176,7 @@ const finalizeCreatorOnboarding = async (userId) => {
     throw new ResponseError("Stripe onboarding not yet complete", 400);
   }
 
-  await pool.query(
+  await writePool.query(
     `UPDATE creator_profiles SET payout_setup = true WHERE user_id = $1`,
     [userId],
   );

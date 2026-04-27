@@ -1,4 +1,4 @@
-import pool from "../config/database.js";
+import writePool, { readPool } from "../config/database.js";
 import bcrypt from "bcrypt";
 
 // 🟩 Create a new user (used for manual signup or admin panel)
@@ -10,7 +10,7 @@ export async function createUser(data) {
     hashedPassword = await bcrypt.hash(password, 10);
   }
 
-  const result = await pool.query(
+  const result = await writePool.query(
     "INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING *",
     [email, hashedPassword]
   );
@@ -20,7 +20,7 @@ export async function createUser(data) {
 
 // 🟦 Get all users (admin-only)
 export async function getAllUsers() {
-  const result = await pool.query(
+  const result = await readPool.query(
     `SELECT u.*, up.display_name, up.bio, cp.stripe_account_id
      FROM users u
      LEFT JOIN user_profiles up ON u.id = up.user_id
@@ -31,7 +31,7 @@ export async function getAllUsers() {
 
 // 🟨 Get user by ID
 export async function getUserById(id) {
-  const result = await pool.query(
+  const result = await readPool.query(
     `SELECT u.*, up.display_name, up.bio, up.profile_picture_url, up.location, up.phone, cp.stripe_account_id
      FROM users u
      LEFT JOIN user_profiles up ON u.id = up.user_id
@@ -44,7 +44,7 @@ export async function getUserById(id) {
 
 // 🟧 Get user by email (useful for login)
 export async function getUserByEmail(email) {
-  const result = await pool.query(
+  const result = await readPool.query(
     `SELECT u.*, up.display_name, up.bio, up.profile_picture_url, up.location, up.phone, cp.stripe_account_id
      FROM users u
      LEFT JOIN user_profiles up ON u.id = up.user_id
@@ -69,7 +69,7 @@ export async function updateUser(email, data) {
 
   const setClause = keys.map((key, index) => `${key} = $${index + 1}`).join(", ");
 
-  const result = await pool.query(
+  const result = await writePool.query(
     `UPDATE users SET ${setClause} WHERE email = $${keys.length + 1} RETURNING *`,
     [...values, email]
   );
@@ -79,7 +79,7 @@ export async function updateUser(email, data) {
 
 // ⬛ Delete user
 export async function deleteUser(email) {
-  const result = await pool.query(
+  const result = await writePool.query(
     "DELETE FROM users WHERE email = $1 RETURNING *",
     [email]
   );

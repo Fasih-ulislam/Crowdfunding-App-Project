@@ -1,11 +1,11 @@
-import pool from "../config/database.js";
+import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
 
 export async function createMilestone(campaignId, creatorId, data) {
   const { title, description, target_amount, deadline } = data;
 
   // Verify campaign exists and belongs to the creator
-  const campaignCheck = await pool.query(
+  const campaignCheck = await readPool.query(
     "SELECT * FROM campaigns WHERE id = $1 AND creator_id = $2",
     [campaignId, creatorId]
   );
@@ -14,7 +14,7 @@ export async function createMilestone(campaignId, creatorId, data) {
     throw new ResponseError("Campaign not found or you are not the owner", 404);
   }
 
-  const client = await pool.connect();
+  const client = await writePool.connect();
   try {
     await client.query("BEGIN");
 
@@ -46,7 +46,7 @@ export async function createMilestone(campaignId, creatorId, data) {
 
 export async function getMilestonesByCampaign(campaignId) {
   // We can also join with escrow_accounts to show how much is locked
-  const result = await pool.query(
+  const result = await readPool.query(
     `SELECT m.*, e.locked_amount, e.status AS escrow_status 
      FROM milestones m
      LEFT JOIN escrow_accounts e ON m.id = e.milestone_id
@@ -59,7 +59,7 @@ export async function getMilestonesByCampaign(campaignId) {
 
 export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
   // First, verify the milestone belongs to a campaign owned by the creator
-  const checkResult = await pool.query(
+  const checkResult = await readPool.query(
     `SELECT m.id, m.status FROM milestones m
      JOIN campaigns c ON m.campaign_id = c.id
      WHERE m.id = $1 AND c.creator_id = $2`,
@@ -79,7 +79,7 @@ export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
   }
 
   // Update status
-  const updateResult = await pool.query(
+  const updateResult = await writePool.query(
     "UPDATE milestones SET status = $1 WHERE id = $2 RETURNING *",
     [newStatus, milestoneId]
   );
@@ -88,7 +88,7 @@ export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
 }
 
 export async function reviewMilestone(milestoneId, action) {
-  const checkResult = await pool.query(
+  const checkResult = await readPool.query(
     `SELECT id, status FROM milestones WHERE id = $1`,
     [milestoneId]
   );
@@ -108,7 +108,7 @@ export async function reviewMilestone(milestoneId, action) {
 
   const newStatus = action === "approve" ? "Active" : "Rejected";
 
-  const updateResult = await pool.query(
+  const updateResult = await writePool.query(
     `UPDATE milestones m
      SET status = $1 
      FROM campaigns c
@@ -121,7 +121,7 @@ export async function reviewMilestone(milestoneId, action) {
 }
 
 export async function getMilestoneDonors(milestoneId) {
-  const result = await pool.query(
+  const result = await readPool.query(
     "SELECT DISTINCT donor_id FROM donations WHERE milestone_id = $1",
     [milestoneId]
   );

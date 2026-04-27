@@ -5,7 +5,7 @@ import {
   createConnectOnboardingLink,
   finalizeCreatorOnboarding,
 } from "../services/payment.service.js";
-import pool from "../config/database.js";
+import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
 
 // ─── Donation ─────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ const initiateDonation = async (req, res, next) => {
     }
 
     // Verify milestone exists and is Active before creating PaymentIntent
-    const { rows } = await pool.query(
+    const { rows } = await readPool.query(
       `SELECT m.id, m.status, up.display_name
        FROM milestones m
        JOIN campaigns c ON c.id = m.campaign_id
@@ -78,7 +78,7 @@ const initiateDonation = async (req, res, next) => {
  * This endpoint handles the actual Stripe Transfer to the creator's account.
  */
 const releaseEscrow = async (req, res, next) => {
-  const client = await pool.connect();
+  const client = await writePool.connect();
   try {
     const { milestoneId } = req.params;
 
@@ -156,7 +156,7 @@ const releaseEscrow = async (req, res, next) => {
  * procedure to update each row with stripe_refund_id + final status.
  */
 const processMilestoneRefunds = async (req, res, next) => {
-  const client = await pool.connect();
+  const client = await writePool.connect();
   try {
     const { milestoneId } = req.params;
 
@@ -243,7 +243,7 @@ const startOnboarding = async (req, res, next) => {
     const { id: userId } = req.user;
 
     // Fetch creator's current stripe_account_id (may be null if first time)
-    const { rows } = await pool.query(
+    const { rows } = await readPool.query(
       `SELECT stripe_account_id, payout_setup FROM creator_profiles WHERE user_id = $1`,
       [userId],
     );

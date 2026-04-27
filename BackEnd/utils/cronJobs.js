@@ -1,12 +1,12 @@
 import cron from "node-cron";
-import pool from "../config/database.js";
+import writePool from "../config/database.js";
 import { queueNotificationJob } from "../services/queueService.js";
 
 export function startCronJobs() {
   // Check for milestones that have been in UnderReview for 24 hours
   cron.schedule("* * * * *", async () => {
     try {
-      const { rows } = await pool.query(
+      const { rows } = await writePool.query(
         `SELECT m.id, m.title, c.creator_id 
          FROM milestones m
          JOIN campaigns c ON c.id = m.campaign_id
@@ -17,10 +17,10 @@ export function startCronJobs() {
 
       for (const milestone of rows) {
         // 1. Close voting in PostgreSQL
-        await pool.query(`CALL close_voting($1)`, [milestone.id]);
+        await writePool.query(`CALL close_voting($1)`, [milestone.id]);
 
         // 2. Fetch the outcome
-        const { rows: resultRows } = await pool.query(
+        const { rows: resultRows } = await writePool.query(
           `SELECT yes_count, no_count, outcome FROM vote_results WHERE milestone_id = $1`,
           [milestone.id]
         );
@@ -38,7 +38,7 @@ export function startCronJobs() {
           });
 
           // 4. Notify all Donors
-          const { rows: donorRows } = await pool.query(
+          const { rows: donorRows } = await writePool.query(
             "SELECT DISTINCT donor_id FROM donations WHERE milestone_id = $1",
             [milestone.id]
           );

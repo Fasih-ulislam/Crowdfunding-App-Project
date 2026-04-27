@@ -1,7 +1,7 @@
-import pool from "../config/database.js";
+import writePool, { readPool } from "../config/database.js";
 
 export async function submitVote(donorId, milestoneId, vote) {
-  const { rows } = await pool.query(
+  const { rows } = await writePool.query(
     `INSERT INTO votes (donor_id, milestone_id, vote)
      VALUES ($1, $2, $3)
      RETURNING *`,
@@ -11,7 +11,7 @@ export async function submitVote(donorId, milestoneId, vote) {
 }
 
 export async function getVoteResults(milestoneId) {
-  const { rows } = await pool.query(
+  const { rows } = await readPool.query(
     `SELECT * FROM vote_results WHERE milestone_id = $1`,
     [milestoneId]
   );
@@ -20,7 +20,7 @@ export async function getVoteResults(milestoneId) {
 
 export async function getLiveVoteCounts(milestoneId) {
   // Check if the milestone exists and is currently under review
-  const milestoneCheck = await pool.query(
+  const milestoneCheck = await readPool.query(
     `SELECT id, status FROM milestones WHERE id = $1`,
     [milestoneId]
   );
@@ -53,7 +53,7 @@ export async function getLiveVoteCounts(milestoneId) {
   }
 
   // Live aggregate from votes table
-  const { rows } = await pool.query(
+  const { rows } = await readPool.query(
     `SELECT
        COUNT(*) FILTER (WHERE vote = TRUE)  AS yes_count,
        COUNT(*) FILTER (WHERE vote = FALSE) AS no_count,

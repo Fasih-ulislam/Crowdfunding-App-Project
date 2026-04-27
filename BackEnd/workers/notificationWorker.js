@@ -2,7 +2,7 @@ import { Worker } from 'bullmq';
 import nodemailer from 'nodemailer';
 import redisConnection from '../config/redis.js';
 import Notification from '../models/Notification.js';
-import pool from '../config/database.js';
+import { readPool } from '../config/database.js';
 
 // Configure NodeMailer transporter (using mock configuration for now)
 const transporter = nodemailer.createTransport({
@@ -20,7 +20,7 @@ const processJob = async (job) => {
 
   try {
     // 1. Fetch User Data from PostgreSQL
-    const { rows: userRows } = await pool.query(
+    const { rows: userRows } = await readPool.query(
       "SELECT email FROM users WHERE id = $1",
       [userId]
     );
