@@ -1,4 +1,17 @@
 services:
+  # ── Redis (cache + BullMQ queue backend) ────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: trustfund-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - trustfund-net
+
   # ── PostgreSQL Master (primary — handles all writes) ──────────────────────
   pg-master:
     image: postgres:16
@@ -66,12 +79,14 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
+      - redis
       - pg-master
       - pg-replica
     networks:
       - trustfund-net
 
 volumes:
+  redis_data:
   pg_master_data:
   pg_replica_data:
 
