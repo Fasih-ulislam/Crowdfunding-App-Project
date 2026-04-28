@@ -2,6 +2,7 @@ import stripe from "../config/stripe.js";
 import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
 import { queueNotificationJob } from "../services/queueService.js";
+import { invalidateMilestoneCollectedCache } from "../services/milestone.service.js";
 
 // ─── Signature Verification ───────────────────────────────────────────────────
 
@@ -99,6 +100,7 @@ const handlePaymentSucceeded = async (paymentIntent) => {
      VALUES ($1, $2, $3, $4)`,
     [donorId, milestoneId, amount, stripePaymentId],
   );
+  await invalidateMilestoneCollectedCache(milestoneId);
 
   console.log(
     `Donation inserted: donor=${donorId}, milestone=${milestoneId}, amount=${amount}`,

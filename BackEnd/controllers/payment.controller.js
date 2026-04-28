@@ -7,6 +7,7 @@ import {
 } from "../services/payment.service.js";
 import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
+import { invalidateMilestoneCollectedCache } from "../services/milestone.service.js";
 
 // ─── Donation ─────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,7 @@ const releaseEscrow = async (req, res, next) => {
       stripeAccountId: stripe_account_id,
       milestoneId,
     });
+    await invalidateMilestoneCollectedCache(milestoneId);
 
     res.status(200).json({
       success: true,
@@ -217,6 +219,7 @@ const processMilestoneRefunds = async (req, res, next) => {
     }
 
     const failed = results.filter((r) => r.status === "Failed");
+    await invalidateMilestoneCollectedCache(milestoneId);
 
     res.status(200).json({
       success: true,

@@ -1,5 +1,80 @@
 import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
+import redisConnection from "../config/redis.js";
+
+const MILESTONE_COLLECTED_TTL_SECONDS = 60;
+const MILESTONE_COLLECTED_KEY_PREFIX = "milestone:v1:collected";
+
+function buildMilestoneCollectedKey(milestoneId) {
+  return `${MILESTONE_COLLECTED_KEY_PREFIX}:${milestoneId}`;
+}
+
+async function getEscrowSnapshotsForMilestones(milestoneIds) {
+  if (!milestoneIds.length) return new Map();
+
+  const snapshots = new Map();
+  const keys = milestoneIds.map((id) => buildMilestoneCollectedKey(id));
+  const missingMilestoneIds = [];
+
+  try {
+    const cachedValues = await redisConnection.mget(keys);
+    cachedValues.forEach((cached, index) => {
+      if (cached) {
+        snapshots.set(milestoneIds[index], JSON.parse(cached));
+      } else {
+        missingMilestoneIds.push(milestoneIds[index]);
+      }
+    });
+  } catch (error) {
+    console.warn("[Cache] Failed reading milestone collected cache:", error.message);
+    missingMilestoneIds.push(...milestoneIds);
+  }
+
+  if (missingMilestoneIds.length) {
+    const { rows } = await readPool.query(
+      `SELECT milestone_id, locked_amount, status
+       FROM escrow_accounts
+       WHERE milestone_id = ANY($1::uuid[])`,
+      [missingMilestoneIds],
+    );
+
+    const dbSnapshotMap = new Map(
+      rows.map((row) => [
+        row.milestone_id,
+        { locked_amount: row.locked_amount, escrow_status: row.status },
+      ]),
+    );
+
+    for (const milestoneId of missingMilestoneIds) {
+      const snapshot = dbSnapshotMap.get(milestoneId) || {
+        locked_amount: "0.00",
+        escrow_status: "Locked",
+      };
+      snapshots.set(milestoneId, snapshot);
+
+      try {
+        await redisConnection.set(
+          buildMilestoneCollectedKey(milestoneId),
+          JSON.stringify(snapshot),
+          "EX",
+          MILESTONE_COLLECTED_TTL_SECONDS,
+        );
+      } catch (error) {
+        console.warn("[Cache] Failed writing milestone collected cache:", error.message);
+      }
+    }
+  }
+
+  return snapshots;
+}
+
+export async function invalidateMilestoneCollectedCache(milestoneId) {
+  try {
+    await redisConnection.del(buildMilestoneCollectedKey(milestoneId));
+  } catch (error) {
+    console.warn("[Cache] Failed invalidating milestone collected cache:", error.message);
+  }
+}
 
 export async function createMilestone(campaignId, creatorId, data) {
   const { title, description, target_amount, deadline } = data;
@@ -45,16 +120,29 @@ export async function createMilestone(campaignId, creatorId, data) {
 }
 
 export async function getMilestonesByCampaign(campaignId) {
-  // We can also join with escrow_accounts to show how much is locked
   const result = await readPool.query(
-    `SELECT m.*, e.locked_amount, e.status AS escrow_status 
+    `SELECT m.*
      FROM milestones m
-     LEFT JOIN escrow_accounts e ON m.id = e.milestone_id
      WHERE m.campaign_id = $1
      ORDER BY m.created_at ASC`,
     [campaignId]
   );
-  return result.rows;
+
+  const milestoneIds = result.rows.map((row) => row.id);
+  const escrowSnapshots = await getEscrowSnapshotsForMilestones(milestoneIds);
+
+  return result.rows.map((milestone) => {
+    const snapshot = escrowSnapshots.get(milestone.id) || {
+      locked_amount: "0.00",
+      escrow_status: "Locked",
+    };
+
+    return {
+      ...milestone,
+      locked_amount: snapshot.locked_amount,
+      escrow_status: snapshot.escrow_status,
+    };
+  });
 }
 
 export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
