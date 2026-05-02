@@ -32,6 +32,11 @@ export async function loginUser({ email, password, activeRole }) {
 
   const user = rows[0];
   if (!user) throw new ResponseError("Invalid Credentials", 401);
+  // Check if user has a password (Google users don't)
+  if (!user.password_hash) {
+  throw new ResponseError("This account uses Google Sign-In. Please login with Google.", 400);
+  }
+
 
   // Verify password
   if (!(await bcrypt.compare(password, user.password_hash)))
