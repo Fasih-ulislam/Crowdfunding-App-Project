@@ -516,6 +516,25 @@ FOR EACH ROW EXECUTE FUNCTION fn_on_milestone_status_updated();
 INSERT INTO users (email, password_hash, is_active)
 VALUES ('test@gmail.com', '$2b$10$slYQmyNdGzin7olVN3p5Be07DlH.PKZbv5H8KnzzVgXXbVxzy71uK', TRUE);
 
+-- =============================================================
+-- 10. GOOGLE OAUTH & ADMIN
+-- =============================================================
+
+-- Google OAuth additions
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+
+-- Admin credentials (hardcoded)
+-- Password: password
+INSERT INTO users (email, password_hash, is_active)
+VALUES ('admin@trustfund.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uZutLdtF2', TRUE)
+ON CONFLICT (email) DO NOTHING;
+
+-- Assign Admin role to admin user
+INSERT INTO user_roles (user_id, role_id)
+SELECT id, 3 FROM users WHERE email = 'admin@trustfund.com'
+ON CONFLICT DO NOTHING;
+
 
 -- =============================================================
 -- END OF SCHEMA
