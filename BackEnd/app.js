@@ -6,6 +6,8 @@ import campaignRoutes from "./routes/campaign.routes.js";
 import milestoneRoutes from "./routes/milestone.routes.js";
 import voteRoutes from "./routes/vote.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import passport from "./config/passport.js";
+import googleRoutes from "./routes/google.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import errorHandler from "./middlewares/globalErrorHandler.js";
@@ -62,6 +64,7 @@ app.use(
 
 //Allow cookies
 app.use(cookieParser());
+app.use(passport.initialize());
 //uploads
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,6 +81,7 @@ app.get("/health-check", (req, res) => {
 // -------> Public Routes <--------
 // Auth Routes (register, login, logout, verify-otp)
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", googleRoutes);
 
 // -------> Protected Routes <--------
 // Each route file handles its own authentication via authenticateUser middleware
