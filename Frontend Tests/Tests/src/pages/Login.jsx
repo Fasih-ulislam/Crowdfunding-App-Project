@@ -89,6 +89,28 @@ const Login = () => {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+        {/* Divider */}
+<div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '20px 0' }}>
+    <div style={{ flex: 1, height: '1px', backgroundColor: '#ddd' }} />
+    <span style={{ fontSize: '12px', color: '#999' }}>or</span>
+    <div style={{ flex: 1, height: '1px', backgroundColor: '#ddd' }} />
+</div>
+
+{/* Google Button */}
+
+  <a href="http://localhost:3000/api/auth/google"
+    style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: '10px', width: '100%', padding: '12px',
+        border: '1px solid #ddd', borderRadius: '4px',
+        fontSize: '14px', fontWeight: '500', color: '#333',
+        textDecoration: 'none', backgroundColor: 'white',
+        cursor: 'pointer', boxSizing: 'border-box',
+    }}
+>
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '20px', height: '20px' }} />
+    Continue with Google
+</a>
       </div>
     </div>
   );
