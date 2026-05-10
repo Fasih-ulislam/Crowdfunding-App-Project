@@ -527,7 +527,7 @@ ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
 -- Admin credentials (hardcoded)
 -- Password: password
 INSERT INTO users (email, password_hash, is_active)
-VALUES ('admin@trustfund.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uZutLdtF2', TRUE)
+VALUES ('admin@trustfund.com', '$2a$10$2N9gaUvIMfFnQtEoLi86OeDf7y6ZZdb6IwuxCv8MnuoPXCBm/1Nsy', TRUE)
 ON CONFLICT (email) DO NOTHING;
 
 -- Assign Admin role to admin user

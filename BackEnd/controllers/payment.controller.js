@@ -264,6 +264,8 @@ const startOnboarding = async (req, res, next) => {
       stripeAccountId: rows[0].stripe_account_id,
     });
 
+    console.log(url);
+
     res.status(200).json({
       success: true,
       onboardingUrl: url,

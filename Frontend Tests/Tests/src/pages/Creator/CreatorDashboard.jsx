@@ -205,7 +205,9 @@ export default function CreatorDashboard({ defaultTab = 'overview' }) {
         setOnboarding(true);
         try {
             const { data } = await paymentAPI.startOnboarding();
-            window.location.href = data.url;
+            console.log(data);
+            
+            window.location.href = data.onboardingUrl;
         } catch (err) {
             toast.error(err.message);
             setOnboarding(false);

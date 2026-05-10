@@ -3,7 +3,7 @@ import { Clock, Target } from 'lucide-react';
 import { formatCurrency, daysLeft, fundingPercent, truncate, statusColor } from '../../utils/helpers';
 import clsx from 'clsx';
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
 
 export default function CampaignCard({ campaign, linkBase = '/campaigns' }) {
     const {
