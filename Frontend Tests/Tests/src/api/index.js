@@ -77,6 +77,9 @@ export const campaignAPI = {
 // ─── MILESTONES ───────────────────────────────────────────────────────────────
 
 export const milestoneAPI = {
+    adminListPending: () =>
+        api.get('/milestones/admin/pending'),
+
     getByCampaign: (campaignId) =>
         api.get(`/milestones/campaign/${campaignId}`),
 

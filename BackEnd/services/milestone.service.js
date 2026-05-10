@@ -119,6 +119,17 @@ export async function createMilestone(campaignId, creatorId, data) {
   }
 }
 
+export async function listPendingMilestonesForAdmin() {
+  const { rows } = await readPool.query(
+    `SELECT m.*, c.title AS campaign_title, c.status AS campaign_status
+     FROM milestones m
+     INNER JOIN campaigns c ON c.id = m.campaign_id
+     WHERE m.status = 'Pending'
+     ORDER BY m.created_at ASC`
+  );
+  return rows;
+}
+
 export async function getMilestonesByCampaign(campaignId) {
   const result = await readPool.query(
     `SELECT m.*

@@ -422,6 +422,11 @@ export default function CreatorDashboard({ defaultTab = 'overview' }) {
                                                         </div>
                                                         <p className="font-semibold text-sm">{ms.title}</p>
                                                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{ms.description}</p>
+                                                        {ms.status === 'Pending' && (
+                                                            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-md px-2 py-1.5 mt-2">
+                                                                Waiting for admin to approve this milestone. Until then it stays Pending and donors cannot fund it (campaign must be Active too).
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     <div className="text-right shrink-0">
                                                         <p className="text-sm font-bold text-brand-600">{formatCurrency(ms.target_amount)}</p>

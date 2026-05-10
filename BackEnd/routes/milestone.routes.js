@@ -2,12 +2,20 @@ import { Router } from "express";
 import {
   addMilestone,
   fetchCampaignMilestones,
+  listPendingMilestonesForAdmin,
   submitMilestoneForReview,
   adminReviewMilestone,
 } from "../controllers/milestone.controller.js";
 import { authenticateUser, authorizeRoles } from "../middlewares/validate.user.middleware.js";
 
 const router = Router();
+
+router.get(
+  "/admin/pending",
+  authenticateUser,
+  authorizeRoles("Admin"),
+  listPendingMilestonesForAdmin,
+);
 
 // Public route to view milestones for a campaign
 router.get("/campaign/:campaignId", fetchCampaignMilestones);

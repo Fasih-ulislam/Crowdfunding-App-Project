@@ -37,6 +37,15 @@ export async function fetchCampaignMilestones(req, res, next) {
   }
 }
 
+export async function listPendingMilestonesForAdmin(req, res, next) {
+  try {
+    const milestones = await milestoneService.listPendingMilestonesForAdmin();
+    res.status(200).json(milestones);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function submitMilestoneForReview(req, res, next) {
   try {
     const milestoneId = req.params.id;

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Users, BookOpen, Shield, ChevronDown, ChevronUp, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { applicationAPI, campaignAPI, paymentAPI } from '../../api';
-import { formatCurrency, statusColor, timeAgo } from '../../utils/helpers';
+import { Users, BookOpen, Shield, ChevronDown, ChevronUp, CheckCircle, XCircle, AlertCircle, Flag } from 'lucide-react';
+import { applicationAPI, campaignAPI, milestoneAPI, paymentAPI } from '../../api';
+import { formatCurrency, statusColor, milestoneStatusColor, timeAgo } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 const TABS = [
     { id: 'applications', label: 'Creator Applications', icon: Users },
     { id: 'campaigns', label: 'All Campaigns', icon: BookOpen },
+    { id: 'milestones', label: 'Milestone review', icon: Flag },
     { id: 'escrow', label: 'Escrow Actions', icon: Shield },
 ];
 
@@ -15,6 +16,7 @@ export default function AdminDashboard() {
     const [tab, setTab] = useState('applications');
     const [applications, setApplications] = useState([]);
     const [campaigns, setCampaigns] = useState([]);
+    const [pendingMilestones, setPendingMilestones] = useState([]);
     const [expandedApp, setExpandedApp] = useState(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState({});
@@ -33,9 +35,16 @@ export default function AdminDashboard() {
         } catch { setCampaigns([]); }
     };
 
+    const loadPendingMilestones = async () => {
+        try {
+            const { data } = await milestoneAPI.adminListPending();
+            setPendingMilestones(Array.isArray(data) ? data : []);
+        } catch { setPendingMilestones([]); }
+    };
+
     useEffect(() => {
         setLoading(true);
-        Promise.all([loadApplications(), loadCampaigns()])
+        Promise.all([loadApplications(), loadCampaigns(), loadPendingMilestones()])
             .finally(() => setLoading(false));
     }, []);
 
@@ -59,6 +68,20 @@ export default function AdminDashboard() {
             await campaignAPI.adminReview(campaignId, approve ? 'approve' : 'reject');
             toast.success(approve ? 'Campaign is now Active.' : 'Campaign returned to Draft.');
             await loadCampaigns();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setActionLoading((p) => ({ ...p, [key]: false }));
+        }
+    };
+
+    const handleMilestoneReview = async (milestoneId, approve) => {
+        const key = `ms-${milestoneId}`;
+        setActionLoading((p) => ({ ...p, [key]: true }));
+        try {
+            await milestoneAPI.adminReview(milestoneId, { action: approve ? 'approve' : 'reject' });
+            toast.success(approve ? 'Milestone is Active — donors can fund it (when campaign is Active).' : 'Milestone rejected.');
+            await loadPendingMilestones();
         } catch (err) {
             toast.error(err.message);
         } finally {
@@ -101,11 +124,12 @@ export default function AdminDashboard() {
             </div>
 
             {/* Quick stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
                 {[
                     { label: 'Pending Applications', value: pendingApps.length, color: 'text-yellow-600' },
                     { label: 'Total Campaigns', value: campaigns.length, color: 'text-brand-600' },
-                    { label: 'Awaiting Approval', value: reviewCampaigns.length, color: 'text-orange-600' },
+                    { label: 'Campaigns awaiting approval', value: reviewCampaigns.length, color: 'text-orange-600' },
+                    { label: 'Milestones awaiting approval', value: pendingMilestones.length, color: 'text-violet-600' },
                     { label: 'Total Applications', value: applications.length, color: 'text-[var(--color-text-primary)]' },
                 ].map(({ label, value, color }) => (
                     <div key={label} className="card p-5">
@@ -258,6 +282,71 @@ export default function AdminDashboard() {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Milestones Tab */}
+            {tab === 'milestones' && (
+                <div className="space-y-4">
+                    <div className="bg-[var(--color-surface-3)] border border-[var(--color-border)] rounded-xl p-4 flex items-start gap-3">
+                        <AlertCircle size={18} className="text-brand-600 mt-0.5 shrink-0" />
+                        <p className="text-sm text-[var(--color-text-secondary)]">
+                            New milestones start as <strong>Pending</strong>. Approve them to become <strong>Active</strong> so donors can pay (the campaign must also be <strong>Active</strong>). Reject sends the milestone to <strong>Rejected</strong>.
+                        </p>
+                    </div>
+                    {loading ? (
+                        <div className="space-y-3">
+                            {[1, 2].map((n) => <div key={n} className="card h-20 animate-pulse bg-[var(--color-surface-3)]" />)}
+                        </div>
+                    ) : pendingMilestones.length === 0 ? (
+                        <div className="text-center py-16 text-[var(--color-text-muted)]">No milestones waiting for review.</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {pendingMilestones.map((ms) => (
+                                <div key={ms.id} className="card p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                                            <span className={clsx('badge text-xs', milestoneStatusColor(ms.status))}>{ms.status}</span>
+                                            {ms.campaign_title && (
+                                                <span className="text-xs text-[var(--color-text-muted)] truncate">
+                                                    Campaign: <span className="font-medium text-[var(--color-text-secondary)]">{ms.campaign_title}</span>
+                                                </span>
+                                            )}
+                                            {ms.campaign_status && (
+                                                <span className={clsx('badge text-xs', statusColor(ms.campaign_status))}>{ms.campaign_status}</span>
+                                            )}
+                                        </div>
+                                        <p className="font-semibold text-sm">{ms.title}</p>
+                                        <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">{ms.description}</p>
+                                        <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                                            Goal {formatCurrency(ms.target_amount)} · ID{' '}
+                                            <span className="font-mono">{ms.id}</span>
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-3 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMilestoneReview(ms.id, true)}
+                                            disabled={actionLoading[`ms-${ms.id}`]}
+                                            className="btn-primary py-2 px-5 gap-2 text-sm"
+                                        >
+                                            <CheckCircle size={14} />
+                                            Approve
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMilestoneReview(ms.id, false)}
+                                            disabled={actionLoading[`ms-${ms.id}`]}
+                                            className="btn-secondary py-2 px-5 gap-2 text-sm text-red-500 border-red-200 hover:bg-red-50"
+                                        >
+                                            <XCircle size={14} />
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
