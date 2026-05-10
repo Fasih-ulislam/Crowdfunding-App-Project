@@ -75,14 +75,24 @@ const handlePaymentSucceeded = async (paymentIntent) => {
     return;
   }
 
-  // Verify milestone exists and is Active
+  // Verify milestone & campaign exist and donations are allowed
   const { rows: milestoneRows } = await readPool.query(
-    `SELECT id, status FROM milestones WHERE id = $1`,
+    `SELECT m.id, m.status, c.status AS campaign_status
+     FROM milestones m
+     JOIN campaigns c ON c.id = m.campaign_id
+     WHERE m.id = $1`,
     [milestoneId],
   );
 
   if (!milestoneRows.length) {
     throw new ResponseError(`Milestone ${milestoneId} not found`, 404);
+  }
+
+  if (milestoneRows[0].campaign_status !== "Active") {
+    console.warn(
+      `Campaign for milestone ${milestoneId} is not Active (campaign status: ${milestoneRows[0].campaign_status}). Skipping donation insert.`,
+    );
+    return;
   }
 
   if (milestoneRows[0].status !== "Active") {

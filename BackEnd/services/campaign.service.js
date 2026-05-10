@@ -116,8 +116,14 @@ export async function createCampaign({ creator_id, title, description, total_goa
 export async function updateCampaign(id, creator_id, { title, description, total_goal, deadline, category_id }) {
   const { rows: existing } = await readPool.query(`SELECT id FROM campaigns WHERE id = $1`, [id]);
   if (!existing[0]) throw new ResponseError("Campaign not found", 404);
-  const { rows: owned } = await readPool.query(`SELECT id FROM campaigns WHERE id = $1 AND creator_id = $2`, [id, creator_id]);
+  const { rows: owned } = await readPool.query(
+    `SELECT id, status FROM campaigns WHERE id = $1 AND creator_id = $2`,
+    [id, creator_id]
+  );
   if (!owned[0]) throw new ResponseError("You are not the owner of this campaign", 403);
+  if (owned[0].status === "PendingApproval") {
+    throw new ResponseError("Cannot edit campaign while it is awaiting admin approval", 400);
+  }
   const { rows } = await writePool.query(
     `UPDATE campaigns SET title = COALESCE($1, title), description = COALESCE($2, description), total_goal = COALESCE($3, total_goal), deadline = COALESCE($4, deadline), category_id = COALESCE($5, category_id) WHERE id = $6 RETURNING *`,
     [title, description, total_goal, deadline, category_id, id]
@@ -125,6 +131,52 @@ export async function updateCampaign(id, creator_id, { title, description, total
   await invalidateCampaignDetailCache(id);
   await invalidateCampaignListCache();
   return rows[0];
+}
+
+export async function submitCampaignForReview(campaignId, creatorId) {
+  const { rows } = await readPool.query(
+    `SELECT id, status, creator_id FROM campaigns WHERE id = $1`,
+    [campaignId]
+  );
+  if (!rows[0]) throw new ResponseError("Campaign not found", 404);
+  if (rows[0].creator_id !== creatorId) {
+    throw new ResponseError("You are not the owner of this campaign", 403);
+  }
+  if (rows[0].status !== "Draft") {
+    throw new ResponseError(
+      `Only Draft campaigns can be submitted for review (current status: '${rows[0].status}')`,
+      400
+    );
+  }
+  const { rows: updated } = await writePool.query(
+    `UPDATE campaigns SET status = 'PendingApproval' WHERE id = $1 RETURNING *`,
+    [campaignId]
+  );
+  await invalidateCampaignDetailCache(campaignId);
+  await invalidateCampaignListCache();
+  return updated[0];
+}
+
+export async function adminReviewCampaign(campaignId, action) {
+  const { rows } = await readPool.query(
+    `SELECT id, status, title, creator_id FROM campaigns WHERE id = $1`,
+    [campaignId]
+  );
+  if (!rows[0]) throw new ResponseError("Campaign not found", 404);
+  if (rows[0].status !== "PendingApproval") {
+    throw new ResponseError(
+      `Campaign is not awaiting approval (current status: '${rows[0].status}')`,
+      400
+    );
+  }
+  const newStatus = action === "approve" ? "Active" : "Draft";
+  const { rows: updated } = await writePool.query(
+    `UPDATE campaigns SET status = $1 WHERE id = $2 RETURNING *`,
+    [newStatus, campaignId]
+  );
+  await invalidateCampaignDetailCache(campaignId);
+  await invalidateCampaignListCache();
+  return updated[0];
 }
 
 export async function deleteCampaign(id, creator_id) {
@@ -179,7 +231,7 @@ export async function uploadMedia(campaign_id, user_id, file) {
 
 export async function getMedia(campaign_id) {
   const { rows } = await readPool.query(
-    `SELECT * FROM campaign_media WHERE campaign_id = $1 ORDER BY created_at DESC`,
+    `SELECT * FROM campaign_media WHERE campaign_id = $1 ORDER BY uploaded_at DESC`,
     [campaign_id]
   );
   return rows;

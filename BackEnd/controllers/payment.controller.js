@@ -34,7 +34,7 @@ const initiateDonation = async (req, res, next) => {
 
     // Verify milestone exists and is Active before creating PaymentIntent
     const { rows } = await readPool.query(
-      `SELECT m.id, m.status, up.display_name
+      `SELECT m.id, m.status, up.display_name, c.status AS campaign_status
        FROM milestones m
        JOIN campaigns c ON c.id = m.campaign_id
        JOIN user_profiles up ON up.user_id = $1
@@ -44,6 +44,10 @@ const initiateDonation = async (req, res, next) => {
 
     if (!rows.length) {
       throw new ResponseError("Milestone not found", 404);
+    }
+
+    if (rows[0].campaign_status !== "Active") {
+      throw new ResponseError("This campaign is not accepting donations", 400);
     }
 
     if (rows[0].status !== "Active") {

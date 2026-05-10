@@ -20,6 +20,11 @@ import { handleStripeWebhook } from "./controllers/webhook.controller.js";
 //Main server instance
 const app = express();
 
+// Behind nginx / Docker LB — trust X-Forwarded-* (set BEHIND_PROXY=true when using docker-compose.nginx.yml)
+if (process.env.BEHIND_PROXY === "true") {
+  app.set("trust proxy", 1);
+}
+
 // Stripe webhook route must come BEFORE express.json()
 app.post(
   "/api/payments/webhook",
@@ -42,7 +47,13 @@ app.use(helmet());
 //CORS --> Restrict to allowed origins in production
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:8080"];
+  : [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:8080",
+    ];
 
 app.use(
   cors({
@@ -77,6 +88,17 @@ app.get("/health-check", (req, res) => {
   res.status(200).json("OK");
   console.log("server working");
 });
+
+// Load-balancer verification (dev/staging): proves which Node instance handled the request
+if (process.env.NODE_ENV !== "production") {
+  app.get("/api/lb-ping", (req, res) => {
+    res.status(200).json({
+      ok: true,
+      port: Number(process.env.PORT) || 3000,
+      pid: process.pid,
+    });
+  });
+}
 
 // -------> Public Routes <--------
 // Auth Routes (register, login, logout, verify-otp)

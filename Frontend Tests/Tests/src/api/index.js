@@ -50,8 +50,14 @@ export const campaignAPI = {
     delete: (id) =>
         api.delete(`/campaigns/${id}`),
 
+    submitForReview: (id) =>
+        api.patch(`/campaigns/${id}/submit-for-review`),
+
+    adminReview: (id, action) =>
+        api.patch(`/campaigns/${id}/review`, { action }),
+
     uploadMedia: (id, formData) =>
-        api.post(`/campaigns/${id}/upload-media`, formData, {
+        api.post(`/campaigns/${id}/media`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }),
 
@@ -78,10 +84,10 @@ export const milestoneAPI = {
         api.post(`/milestones/campaign/${campaignId}`, data),
 
     submitForReview: (milestoneId) =>
-        api.post(`/milestones/${milestoneId}/submit-review`),
+        api.patch(`/milestones/${milestoneId}/status`, {}),
 
     adminReview: (milestoneId, data) =>
-        api.post(`/milestones/${milestoneId}/admin-review`, data),
+        api.patch(`/milestones/${milestoneId}/review`, data),
 };
 
 // ─── VOTES ────────────────────────────────────────────────────────────────────

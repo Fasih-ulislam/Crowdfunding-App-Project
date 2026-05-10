@@ -5,6 +5,8 @@ import {
   createCampaign,
   updateCampaign,
   deleteCampaign,
+  submitCampaignForReview,
+  adminReviewCampaign,
   getCategories,
   followCampaign,
   unfollowCampaign,
@@ -20,6 +22,20 @@ const router = Router();
 // Public routes
 router.get("/", getAllCampaigns);
 router.get("/categories", getCategories);
+
+router.patch(
+  "/:id/submit-for-review",
+  authenticateUser,
+  authorizeRoles("Creator"),
+  submitCampaignForReview,
+);
+router.patch(
+  "/:id/review",
+  authenticateUser,
+  authorizeRoles("Admin"),
+  adminReviewCampaign,
+);
+
 router.get("/:id", getCampaignById);
 
 // Creator only routes

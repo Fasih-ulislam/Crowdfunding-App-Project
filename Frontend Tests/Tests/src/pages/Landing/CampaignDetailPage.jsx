@@ -28,33 +28,49 @@ export default function CampaignDetailPage() {
 
     useEffect(() => {
         async function load() {
-            try {
-                const [campRes, msRes, mediaRes] = await Promise.all([
-                    campaignAPI.getById(id),
-                    milestoneAPI.getByCampaign(id),
-                    campaignAPI.getMedia(id),
-                ]);
-                setCampaign(campRes.data);
-                setMilestones(Array.isArray(msRes.data) ? msRes.data : []);
-                setMedia(Array.isArray(mediaRes.data) ? mediaRes.data : []);
-
-                // Load vote results for each milestone
-                const results = {};
-                for (const ms of (Array.isArray(msRes.data) ? msRes.data : [])) {
-                    if (ms.status === 'UnderReview' || ms.status === 'Approved') {
-                        try {
-                            const vr = await voteAPI.getResults(ms.id);
-                            results[ms.id] = vr.data;
-                        } catch { /* no votes yet */ }
-                    }
-                }
-                setVoteResults(results);
-            } catch (err) {
+            if (!id) {
                 toast.error('Campaign not found');
                 navigate('/campaigns');
-            } finally {
                 setLoading(false);
+                return;
             }
+            try {
+                const { data: camp } = await campaignAPI.getById(id);
+                setCampaign(camp);
+            } catch {
+                toast.error('Campaign not found');
+                navigate('/campaigns');
+                setLoading(false);
+                return;
+            }
+
+            let milestonesData = [];
+            try {
+                const msRes = await milestoneAPI.getByCampaign(id);
+                milestonesData = Array.isArray(msRes.data) ? msRes.data : [];
+                setMilestones(milestonesData);
+            } catch {
+                setMilestones([]);
+            }
+
+            try {
+                const mediaRes = await campaignAPI.getMedia(id);
+                setMedia(Array.isArray(mediaRes.data) ? mediaRes.data : []);
+            } catch {
+                setMedia([]);
+            }
+
+            const results = {};
+            for (const ms of milestonesData) {
+                if (ms.status === 'UnderReview' || ms.status === 'Approved') {
+                    try {
+                        const vr = await voteAPI.getResults(ms.id);
+                        results[ms.id] = vr.data;
+                    } catch { /* no votes yet */ }
+                }
+            }
+            setVoteResults(results);
+            setLoading(false);
         }
         load();
     }, [id, navigate]);

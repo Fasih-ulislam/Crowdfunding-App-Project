@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, BookOpen, Shield, ChevronDown, ChevronUp, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { applicationAPI, campaignAPI, milestoneAPI, paymentAPI } from '../../api';
-import { formatCurrency, statusColor, milestoneStatusColor, timeAgo } from '../../utils/helpers';
+import { applicationAPI, campaignAPI, paymentAPI } from '../../api';
+import { formatCurrency, statusColor, timeAgo } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -49,6 +49,20 @@ export default function AdminDashboard() {
             toast.error(err.message);
         } finally {
             setActionLoading((p) => ({ ...p, [appId]: false }));
+        }
+    };
+
+    const handleCampaignReview = async (campaignId, approve) => {
+        const key = `camp-${campaignId}`;
+        setActionLoading((p) => ({ ...p, [key]: true }));
+        try {
+            await campaignAPI.adminReview(campaignId, approve ? 'approve' : 'reject');
+            toast.success(approve ? 'Campaign is now Active.' : 'Campaign returned to Draft.');
+            await loadCampaigns();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setActionLoading((p) => ({ ...p, [key]: false }));
         }
     };
 
@@ -212,7 +226,7 @@ export default function AdminDashboard() {
                     ) : campaigns.length === 0 ? (
                         <div className="text-center py-16 text-[var(--color-text-muted)]">No campaigns.</div>
                     ) : campaigns.map((c) => (
-                        <div key={c.id} className="card p-5 flex items-center justify-between gap-4">
+                        <div key={c.id} className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                     <span className={clsx('badge text-xs', statusColor(c.status))}>{c.status}</span>
@@ -220,6 +234,28 @@ export default function AdminDashboard() {
                                 <p className="font-semibold text-sm truncate">{c.title}</p>
                                 <p className="text-xs text-[var(--color-text-muted)]">Goal: {formatCurrency(c.total_goal)}</p>
                             </div>
+                            {c.status === 'PendingApproval' && (
+                                <div className="flex gap-3 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCampaignReview(c.id, true)}
+                                        disabled={actionLoading[`camp-${c.id}`]}
+                                        className="btn-primary py-2 px-5 gap-2 text-sm"
+                                    >
+                                        <CheckCircle size={14} />
+                                        {actionLoading[`camp-${c.id}`] ? '…' : 'Approve'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCampaignReview(c.id, false)}
+                                        disabled={actionLoading[`camp-${c.id}`]}
+                                        className="btn-secondary py-2 px-5 gap-2 text-sm text-red-500 border-red-200 hover:bg-red-50"
+                                    >
+                                        <XCircle size={14} />
+                                        Reject
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

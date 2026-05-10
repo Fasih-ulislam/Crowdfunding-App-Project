@@ -17,8 +17,6 @@ const TABS = [
     { id: 'notifications', label: 'Notifications', icon: Bell },
 ];
 
-const CAMPAIGN_STATUS_OPTS = ['Draft', 'PendingApproval', 'Active', 'Funded', 'Failed'];
-
 function CreateCampaignForm({ categories, onCreated }) {
     const [form, setForm] = useState({
         title: '', description: '', total_goal: '', deadline: '', category_id: '',
@@ -32,15 +30,22 @@ function CreateCampaignForm({ categories, onCreated }) {
         e.preventDefault();
         setLoading(true);
         try {
+            const cid = parseInt(form.category_id, 10);
+            if (!Number.isFinite(cid) || cid < 1) {
+                toast.error('Please select a category.');
+                return;
+            }
             const { data } = await campaignAPI.create({
-                ...form,
+                title: form.title,
+                description: form.description,
                 total_goal: parseFloat(form.total_goal),
-                category_id: parseInt(form.category_id),
+                deadline: form.deadline,
+                category_id: cid,
             });
             // Upload media if selected
             if (mediaFile) {
                 const fd = new FormData();
-                fd.append('media', mediaFile);
+                fd.append('image', mediaFile);
                 await campaignAPI.uploadMedia(data.campaign.id, fd);
             }
             toast.success('Campaign created!');
@@ -199,6 +204,16 @@ export default function CreatorDashboard({ defaultTab = 'overview' }) {
             toast.success('Milestone submitted for review!');
             if (expandedCampaign) await loadMilestones(expandedCampaign);
         } catch (err) { toast.error(err.message); }
+    };
+
+    const handleSubmitCampaignForReview = async (campaignId) => {
+        try {
+            await campaignAPI.submitForReview(campaignId);
+            toast.success('Campaign submitted for admin review.');
+            await loadCampaigns();
+        } catch (err) {
+            toast.error(err.message);
+        }
     };
 
     const handleStripeOnboarding = async () => {
@@ -364,6 +379,25 @@ export default function CreatorDashboard({ defaultTab = 'overview' }) {
                             {/* Expanded: milestones */}
                             {expandedCampaign === c.id && (
                                 <div className="border-t border-[var(--color-border)] p-5">
+                                    {c.status === 'Draft' && (
+                                        <div className="mb-4 flex flex-wrap items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSubmitCampaignForReview(c.id)}
+                                                className="btn-primary text-xs py-2 px-4 gap-1.5"
+                                            >
+                                                <CheckCircle size={14} /> Submit campaign for review
+                                            </button>
+                                            <p className="text-xs text-[var(--color-text-muted)]">
+                                                An admin must approve before it appears as Active for donors.
+                                            </p>
+                                        </div>
+                                    )}
+                                    {c.status === 'PendingApproval' && (
+                                        <p className="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                            Awaiting admin approval — editing is locked until approved or returned to Draft.
+                                        </p>
+                                    )}
                                     <div className="flex items-center justify-between mb-4">
                                         <p className="text-sm font-semibold text-[var(--color-text-secondary)]">Milestones</p>
                                         <button
