@@ -61,7 +61,9 @@ export async function getAllCampaigns({ status, category_id, creator_id } = {}) 
     console.warn("[Cache] Failed to read campaigns list cache:", error.message);
   }
 
-  let query = `SELECT c.*, u.email AS creator_email, cc.name AS category_name FROM campaigns c JOIN users u ON c.creator_id = u.id LEFT JOIN campaign_categories cc ON c.category_id = cc.id WHERE 1=1`;
+  let query = `SELECT c.*, u.email AS creator_email, cc.name AS category_name,
+      (SELECT url FROM campaign_media WHERE campaign_id = c.id AND media_type = 'image' ORDER BY uploaded_at DESC LIMIT 1) AS media_url
+    FROM campaigns c JOIN users u ON c.creator_id = u.id LEFT JOIN campaign_categories cc ON c.category_id = cc.id WHERE 1=1`;
   const params = [];
   if (status) { params.push(status); query += ` AND c.status = $${params.length}`; }
   if (category_id) { params.push(category_id); query += ` AND c.category_id = $${params.length}`; }
@@ -90,7 +92,9 @@ export async function getCampaignById(id) {
   }
 
   const { rows } = await readPool.query(
-    `SELECT c.*, u.email AS creator_email, cc.name AS category_name FROM campaigns c JOIN users u ON c.creator_id = u.id LEFT JOIN campaign_categories cc ON c.category_id = cc.id WHERE c.id = $1`,
+    `SELECT c.*, u.email AS creator_email, cc.name AS category_name,
+        (SELECT url FROM campaign_media WHERE campaign_id = c.id AND media_type = 'image' ORDER BY uploaded_at DESC LIMIT 1) AS media_url
+      FROM campaigns c JOIN users u ON c.creator_id = u.id LEFT JOIN campaign_categories cc ON c.category_id = cc.id WHERE c.id = $1`,
     [id]
   );
   if (!rows[0]) throw new ResponseError("Campaign not found", 404);

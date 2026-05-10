@@ -1,10 +1,16 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import ResponseError from "../utils/customError.js";
+
+// Multer's diskStorage does not create the destination directory.
+// Ensure it exists at module load so fresh clones / containers don't ENOENT.
+const UPLOAD_DIR = "uploads";
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, `${UPLOAD_DIR}/`);
   },
   filename: (req, file, cb) => {
     const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);

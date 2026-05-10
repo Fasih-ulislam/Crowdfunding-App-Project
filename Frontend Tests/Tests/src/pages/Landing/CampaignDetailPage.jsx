@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
 
 export default function CampaignDetailPage() {
     const { id } = useParams();
