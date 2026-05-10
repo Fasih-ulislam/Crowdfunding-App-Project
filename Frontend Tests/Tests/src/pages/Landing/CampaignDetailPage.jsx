@@ -5,11 +5,106 @@ import { campaignAPI, milestoneAPI, paymentAPI, voteAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { formatCurrency, daysLeft, fundingPercent, statusColor, milestoneStatusColor } from '../../utils/helpers';
 import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+
+// Donation UI lives in its own component so it can use the Stripe hooks
+// (useStripe / useElements only work inside an <Elements> provider).
+function DonateBox({ selectedMilestone, user, navigate, onSuccess }) {
+    const stripe = useStripe();
+    const elements = useElements();
+    const [donateAmount, setDonateAmount] = useState('');
+    const [donating, setDonating] = useState(false);
+    const [cardComplete, setCardComplete] = useState(false);
+
+    const handleDonate = async () => {
+        if (!user) { toast('Log in to donate', { icon: '🔐' }); navigate('/login'); return; }
+        if (!selectedMilestone) { toast.error('Select a milestone to donate to'); return; }
+        if (!donateAmount || parseFloat(donateAmount) <= 0) { toast.error('Enter a valid amount'); return; }
+        if (!stripe || !elements) { toast.error('Payment system not ready'); return; }
+
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) { toast.error('Card field not ready'); return; }
+
+        setDonating(true);
+        try {
+            const { data } = await paymentAPI.donate(selectedMilestone.id, parseFloat(donateAmount));
+            const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
+                payment_method: { card: cardElement },
+            });
+            if (error) {
+                toast.error(error.message);
+            } else if (paymentIntent?.status === 'succeeded') {
+                toast.success('Donation successful! Thank you 💚');
+                setDonateAmount('');
+                cardElement.clear();
+                onSuccess?.();
+            }
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setDonating(false);
+        }
+    };
+
+    return (
+        <>
+            {selectedMilestone && (
+                <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 mb-3 text-xs">
+                    <p className="text-brand-700 font-semibold">Donating to:</p>
+                    <p className="text-brand-600">{selectedMilestone.title}</p>
+                </div>
+            )}
+            <div className="relative mb-3">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm font-medium">$</span>
+                <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={donateAmount}
+                    onChange={(e) => setDonateAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="input pl-7"
+                />
+            </div>
+            <div className="mb-3 p-3 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-2)]">
+                <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-2">Card details</label>
+                <CardElement
+                    onChange={(e) => setCardComplete(e.complete)}
+                    options={{
+                        style: {
+                            base: {
+                                fontSize: '14px',
+                                color: 'inherit',
+                                '::placeholder': { color: '#9ca3af' },
+                            },
+                            invalid: { color: '#ef4444' },
+                        },
+                    }}
+                />
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
+                    Test card: 4242 4242 4242 4242 — any future date, any CVC
+                </p>
+            </div>
+            {!selectedMilestone && (
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">
+                    ↑ Select a milestone above to donate
+                </p>
+            )}
+            <button
+                onClick={handleDonate}
+                disabled={donating || !selectedMilestone || !cardComplete || !stripe}
+                className="btn-primary w-full justify-center py-3"
+            >
+                {donating ? 'Processing…' : 'Donate Now'}
+            </button>
+        </>
+    );
+}
 
 export default function CampaignDetailPage() {
     const { id } = useParams();
@@ -22,8 +117,6 @@ export default function CampaignDetailPage() {
     const [loading, setLoading] = useState(true);
     const [followed, setFollowed] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState(null);
-    const [donateAmount, setDonateAmount] = useState('');
-    const [donating, setDonating] = useState(false);
     const [voteResults, setVoteResults] = useState({});
 
     useEffect(() => {
@@ -88,31 +181,6 @@ export default function CampaignDetailPage() {
                 toast.success('Campaign followed!');
             }
         } catch (err) { toast.error(err.message); }
-    };
-
-    const handleDonate = async () => {
-        if (!user) { toast('Log in to donate', { icon: '🔐' }); navigate('/login'); return; }
-        if (!selectedMilestone) { toast.error('Select a milestone to donate to'); return; }
-        if (!donateAmount || parseFloat(donateAmount) <= 0) { toast.error('Enter a valid amount'); return; }
-
-        setDonating(true);
-        try {
-            const { data } = await paymentAPI.donate(selectedMilestone.id, parseFloat(donateAmount));
-            const stripe = await stripePromise;
-            if (!stripe) { toast.error('Payment system unavailable. Check Stripe key.'); return; }
-            const { error } = await stripe.confirmCardPayment(data.clientSecret);
-            if (error) {
-                toast.error(error.message);
-            } else {
-                toast.success('Donation successful! Thank you 💚');
-                setDonateAmount('');
-                setSelectedMilestone(null);
-            }
-        } catch (err) {
-            toast.error(err.message);
-        } finally {
-            setDonating(false);
-        }
     };
 
     const handleVote = async (milestoneId, vote) => {
@@ -263,38 +331,14 @@ export default function CampaignDetailPage() {
 
                         {/* Donate */}
                         {campaign.status === 'Active' && (
-                            <>
-                                {selectedMilestone && (
-                                    <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 mb-3 text-xs">
-                                        <p className="text-brand-700 font-semibold">Donating to:</p>
-                                        <p className="text-brand-600">{selectedMilestone.title}</p>
-                                    </div>
-                                )}
-                                <div className="relative mb-3">
-                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm font-medium">$</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        step="0.01"
-                                        value={donateAmount}
-                                        onChange={(e) => setDonateAmount(e.target.value)}
-                                        placeholder="Enter amount"
-                                        className="input pl-7"
-                                    />
-                                </div>
-                                {!selectedMilestone && (
-                                    <p className="text-xs text-[var(--color-text-muted)] mb-3">
-                                        ↑ Select a milestone above to donate
-                                    </p>
-                                )}
-                                <button
-                                    onClick={handleDonate}
-                                    disabled={donating || !selectedMilestone}
-                                    className="btn-primary w-full justify-center py-3"
-                                >
-                                    {donating ? 'Processing…' : 'Donate Now'}
-                                </button>
-                            </>
+                            <Elements stripe={stripePromise}>
+                                <DonateBox
+                                    selectedMilestone={selectedMilestone}
+                                    user={user}
+                                    navigate={navigate}
+                                    onSuccess={() => setSelectedMilestone(null)}
+                                />
+                            </Elements>
                         )}
 
                         {/* Follow button */}
