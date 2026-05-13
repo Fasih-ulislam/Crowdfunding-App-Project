@@ -1,8 +1,8 @@
-import { Queue } from 'bullmq';
-import redisConnection from '../config/redis.js';
+import { Queue } from "bullmq";
+import redisConnection from "../config/redis.js";
 
 // Create a new queue for notifications
-export const notificationQueue = new Queue('notificationQueue', {
+export const notificationQueue = new Queue("notificationQueue", {
   connection: redisConnection,
 });
 
@@ -18,11 +18,13 @@ export const queueNotificationJob = async (jobName, payload) => {
       removeOnFail: false, // keep failed jobs for inspection
       attempts: 3, // retry 3 times on failure
       backoff: {
-        type: 'exponential',
+        type: "exponential",
         delay: 3000, // first delay is 3 seconds
       },
     });
-    console.log(`[Queue] Job '${jobName}' added successfully for user ${payload.userId}`);
+    console.log(
+      `[Queue] Job '${jobName}' added successfully for user ${payload.userId}`,
+    );
   } catch (error) {
     console.error(`[Queue] Failed to add job '${jobName}':`, error);
   }

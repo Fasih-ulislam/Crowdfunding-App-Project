@@ -3,15 +3,17 @@ import { Clock, Target } from 'lucide-react';
 import { formatCurrency, daysLeft, fundingPercent, truncate, statusColor } from '../../utils/helpers';
 import clsx from 'clsx';
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 export default function CampaignCard({ campaign, linkBase = '/campaigns' }) {
     const {
         id, title, description, total_goal, deadline, status,
-        category_name, raised_amount, media_url,
+        category_name, amount_raised, media_url,
     } = campaign;
 
-    const percent = fundingPercent(raised_amount ?? 0, total_goal);
+    console.log(campaign);
+    
+    const percent = fundingPercent(amount_raised ?? 0, total_goal);
     const days = daysLeft(deadline);
     const imgSrc = media_url ? `${API_BASE}${media_url}` : null;
 
@@ -69,7 +71,7 @@ export default function CampaignCard({ campaign, linkBase = '/campaigns' }) {
                 {/* Stats row */}
                 <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
                     <span className="font-semibold text-brand-600">
-                        {formatCurrency(raised_amount ?? 0)} raised
+                        {formatCurrency(amount_raised ?? 0)} raised
                     </span>
                     <span className="flex items-center gap-1">
                         <Clock size={11} />

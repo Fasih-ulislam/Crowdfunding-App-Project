@@ -12,7 +12,7 @@ export function startCronJobs() {
          JOIN campaigns c ON c.id = m.campaign_id
          WHERE m.status = $1
          AND m.created_at <= NOW() - INTERVAL '24 hours'`,
-        ["UnderReview"]
+        ["UnderReview"],
       );
 
       for (const milestone of rows) {
@@ -22,7 +22,7 @@ export function startCronJobs() {
         // 2. Fetch the outcome
         const { rows: resultRows } = await writePool.query(
           `SELECT yes_count, no_count, outcome FROM vote_results WHERE milestone_id = $1`,
-          [milestone.id]
+          [milestone.id],
         );
 
         if (resultRows.length > 0) {
@@ -34,26 +34,33 @@ export function startCronJobs() {
             userId: milestone.creator_id,
             type: "SYSTEM_ALERT",
             message: `Voting closed for your milestone "${milestone.title}". Outcome: ${statusText}. (Yes: ${yes_count}, No: ${no_count})`,
-            metadata: { milestoneId: milestone.id, outcome, yes_count, no_count },
+            metadata: {
+              milestoneId: milestone.id,
+              outcome,
+              yes_count,
+              no_count,
+            },
           });
 
           // 4. Notify all Donors
           const { rows: donorRows } = await writePool.query(
             "SELECT DISTINCT donor_id FROM donations WHERE milestone_id = $1",
-            [milestone.id]
+            [milestone.id],
           );
 
           for (const donor of donorRows) {
             await queueNotificationJob("MILESTONE_VOTE_RESULT", {
               userId: donor.donor_id,
               type: "SYSTEM_ALERT",
-              message: `Voting has closed for milestone "${milestone.title}". The funds have been ${outcome ? 'released' : 'marked for refund'}.`,
+              message: `Voting has closed for milestone "${milestone.title}". The funds have been ${outcome ? "released" : "marked for refund"}.`,
               metadata: { milestoneId: milestone.id, outcome },
             });
           }
         }
 
-        console.log(`Closed voting and sent notifications for milestone: ${milestone.id}`);
+        console.log(
+          `Closed voting and sent notifications for milestone: ${milestone.id}`,
+        );
       }
     } catch (err) {
       console.error("Cron job error:", err.message);

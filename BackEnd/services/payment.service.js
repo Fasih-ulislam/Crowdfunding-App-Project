@@ -28,10 +28,10 @@ const getOrCreateCustomer = async (userId, email, displayName) => {
   });
 
   // Save to DB
-  await writePool.query(`UPDATE users SET stripe_customer_id = $1 WHERE id = $2`, [
-    customer.id,
-    userId,
-  ]);
+  await writePool.query(
+    `UPDATE users SET stripe_customer_id = $1 WHERE id = $2`,
+    [customer.id, userId],
+  );
 
   return customer.id;
 };

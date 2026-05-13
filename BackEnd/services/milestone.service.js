@@ -26,7 +26,10 @@ async function getEscrowSnapshotsForMilestones(milestoneIds) {
       }
     });
   } catch (error) {
-    console.warn("[Cache] Failed reading milestone collected cache:", error.message);
+    console.warn(
+      "[Cache] Failed reading milestone collected cache:",
+      error.message,
+    );
     missingMilestoneIds.push(...milestoneIds);
   }
 
@@ -60,7 +63,10 @@ async function getEscrowSnapshotsForMilestones(milestoneIds) {
           MILESTONE_COLLECTED_TTL_SECONDS,
         );
       } catch (error) {
-        console.warn("[Cache] Failed writing milestone collected cache:", error.message);
+        console.warn(
+          "[Cache] Failed writing milestone collected cache:",
+          error.message,
+        );
       }
     }
   }
@@ -72,7 +78,10 @@ export async function invalidateMilestoneCollectedCache(milestoneId) {
   try {
     await redisConnection.del(buildMilestoneCollectedKey(milestoneId));
   } catch (error) {
-    console.warn("[Cache] Failed invalidating milestone collected cache:", error.message);
+    console.warn(
+      "[Cache] Failed invalidating milestone collected cache:",
+      error.message,
+    );
   }
 }
 
@@ -82,7 +91,7 @@ export async function createMilestone(campaignId, creatorId, data) {
   // Verify campaign exists and belongs to the creator
   const campaignCheck = await readPool.query(
     "SELECT * FROM campaigns WHERE id = $1 AND creator_id = $2",
-    [campaignId, creatorId]
+    [campaignId, creatorId],
   );
 
   if (campaignCheck.rows.length === 0) {
@@ -97,7 +106,7 @@ export async function createMilestone(campaignId, creatorId, data) {
     const milestoneResult = await client.query(
       `INSERT INTO milestones (campaign_id, title, description, target_amount, deadline, status)
        VALUES ($1, $2, $3, $4, $5, 'Pending') RETURNING *`,
-      [campaignId, title, description, target_amount, deadline]
+      [campaignId, title, description, target_amount, deadline],
     );
 
     const milestone = milestoneResult.rows[0];
@@ -106,7 +115,7 @@ export async function createMilestone(campaignId, creatorId, data) {
     await client.query(
       `INSERT INTO escrow_accounts (milestone_id, locked_amount, status)
        VALUES ($1, 0, 'Locked')`,
-      [milestone.id]
+      [milestone.id],
     );
 
     await client.query("COMMIT");
@@ -125,7 +134,7 @@ export async function listPendingMilestonesForAdmin() {
      FROM milestones m
      INNER JOIN campaigns c ON c.id = m.campaign_id
      WHERE m.status = 'Pending'
-     ORDER BY m.created_at ASC`
+     ORDER BY m.created_at ASC`,
   );
   return rows;
 }
@@ -136,7 +145,7 @@ export async function getMilestonesByCampaign(campaignId) {
      FROM milestones m
      WHERE m.campaign_id = $1
      ORDER BY m.created_at ASC`,
-    [campaignId]
+    [campaignId],
   );
 
   const milestoneIds = result.rows.map((row) => row.id);
@@ -162,25 +171,28 @@ export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
     `SELECT m.id, m.status FROM milestones m
      JOIN campaigns c ON m.campaign_id = c.id
      WHERE m.id = $1 AND c.creator_id = $2`,
-    [milestoneId, creatorId]
+    [milestoneId, creatorId],
   );
 
   if (checkResult.rows.length === 0) {
-    throw new ResponseError("Milestone not found or you are not the campaign owner", 404);
+    throw new ResponseError(
+      "Milestone not found or you are not the campaign owner",
+      404,
+    );
   }
 
   const currentStatus = checkResult.rows[0].status;
   if (currentStatus !== "Active") {
     throw new ResponseError(
       `Cannot submit milestone for review. Milestone must be 'Active' (current status: '${currentStatus}')`,
-      400
+      400,
     );
   }
 
   // Update status
   const updateResult = await writePool.query(
     "UPDATE milestones SET status = $1 WHERE id = $2 RETURNING *",
-    [newStatus, milestoneId]
+    [newStatus, milestoneId],
   );
 
   return updateResult.rows[0];
@@ -189,7 +201,7 @@ export async function updateMilestoneStatus(milestoneId, creatorId, newStatus) {
 export async function reviewMilestone(milestoneId, action) {
   const checkResult = await readPool.query(
     `SELECT id, status FROM milestones WHERE id = $1`,
-    [milestoneId]
+    [milestoneId],
   );
 
   if (checkResult.rows.length === 0) {
@@ -201,7 +213,7 @@ export async function reviewMilestone(milestoneId, action) {
   if (currentStatus !== "Pending") {
     throw new ResponseError(
       `Cannot review milestone. Milestone must be 'Pending' (current status: '${currentStatus}')`,
-      400
+      400,
     );
   }
 
@@ -213,7 +225,7 @@ export async function reviewMilestone(milestoneId, action) {
      FROM campaigns c
      WHERE m.campaign_id = c.id AND m.id = $2
      RETURNING m.*, c.creator_id`,
-    [newStatus, milestoneId]
+    [newStatus, milestoneId],
   );
 
   return updateResult.rows[0];
@@ -222,7 +234,7 @@ export async function reviewMilestone(milestoneId, action) {
 export async function getMilestoneDonors(milestoneId) {
   const result = await readPool.query(
     "SELECT DISTINCT donor_id FROM donations WHERE milestone_id = $1",
-    [milestoneId]
+    [milestoneId],
   );
-  return result.rows.map(row => row.donor_id);
+  return result.rows.map((row) => row.donor_id);
 }

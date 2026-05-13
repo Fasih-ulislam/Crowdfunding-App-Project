@@ -1,23 +1,31 @@
 import * as applicationService from "../services/application.service.js";
-import { applicationSchema, applicationApprovalSchema } from "../utils/validation.js";
+import {
+  applicationSchema,
+  applicationApprovalSchema,
+} from "../utils/validation.js";
 import ResponseError from "../utils/customError.js";
 import { queueNotificationJob } from "../services/queueService.js";
 
-// 🟩 Submit a new application
+// Submit a new application
 export async function submitApplication(req, res, next) {
   try {
     const { error } = applicationSchema.validate(req.body);
     if (error) throw new ResponseError(error.details[0].message, 400);
 
     const data = req.user;
-    const application = await applicationService.submitApplication(data.id, req.body);
-    res.status(201).json({ message: "Application submitted successfully", application });
+    const application = await applicationService.submitApplication(
+      data.id,
+      req.body,
+    );
+    res
+      .status(201)
+      .json({ message: "Application submitted successfully", application });
   } catch (err) {
     next(err);
   }
 }
 
-// 🟦 Get my applications
+// Get my applications
 export async function getMyApplications(req, res, next) {
   try {
     const data = req.user;
@@ -48,7 +56,7 @@ export async function approveOrRejectApplication(req, res, next) {
     const admin = req.user;
     const application = await applicationService.approveOrRejectApplication(
       applicationId,
-      { ...req.body, reviewed_by: admin.id }
+      { ...req.body, reviewed_by: admin.id },
     );
     if (!application) throw new ResponseError("Application doesn't exist", 404);
     res.json({ message: "Application updated successfully", application });

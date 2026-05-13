@@ -63,6 +63,8 @@ const initiateDonation = async (req, res, next) => {
       milestoneId: milestone_id,
     });
 
+    invalidateMilestoneCollectedCache();
+
     res.status(200).json({
       success: true,
       clientSecret,

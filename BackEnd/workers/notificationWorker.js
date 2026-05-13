@@ -1,13 +1,13 @@
-import { Worker } from 'bullmq';
-import nodemailer from 'nodemailer';
-import redisConnection from '../config/redis.js';
-import Notification from '../models/Notification.js';
-import { readPool } from '../config/database.js';
+import { Worker } from "bullmq";
+import nodemailer from "nodemailer";
+import redisConnection from "../config/redis.js";
+import Notification from "../models/Notification.js";
+import { readPool } from "../config/database.js";
 
 // Configure NodeMailer transporter (using mock configuration for now)
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-  port: process.env.SMTP_PORT || 587,
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: process.env.SMTP_PORT || 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -22,7 +22,7 @@ const processJob = async (job) => {
     // 1. Fetch User Data from PostgreSQL
     const { rows: userRows } = await readPool.query(
       "SELECT email FROM users WHERE id = $1",
-      [userId]
+      [userId],
     );
 
     const user = userRows[0];
@@ -42,12 +42,14 @@ const processJob = async (job) => {
       emailSent = true;
       console.log(`[Worker] Email successfully sent to ${user.email}`);
     }
-
   } catch (error) {
-    console.error(`[Worker] Error sending email to user ${userId}:`, error.message);
+    console.error(
+      `[Worker] Error sending email to user ${userId}:`,
+      error.message,
+    );
     // We do NOT throw here if we still want to save the notification to MongoDB with email_sent: false.
     // If you want BullMQ to retry the entire job (including MongoDB save), uncomment the next line:
-    // throw error; 
+    // throw error;
   }
 
   // 3. Save Unstructured Notification to MongoDB
@@ -61,22 +63,27 @@ const processJob = async (job) => {
     });
 
     await newNotification.save();
-    console.log(`[Worker] Notification saved to MongoDB for user ${userId} (email_sent: ${emailSent})`);
+    console.log(
+      `[Worker] Notification saved to MongoDB for user ${userId} (email_sent: ${emailSent})`,
+    );
   } catch (mongoError) {
-    console.error(`[Worker] Failed to save notification to MongoDB for user ${userId}:`, mongoError);
+    console.error(
+      `[Worker] Failed to save notification to MongoDB for user ${userId}:`,
+      mongoError,
+    );
     throw mongoError; // If Mongo fails, we want the job to retry
   }
 };
 
 // Initialize the Worker to listen to 'notificationQueue'
-export const notificationWorker = new Worker('notificationQueue', processJob, {
+export const notificationWorker = new Worker("notificationQueue", processJob, {
   connection: redisConnection,
 });
 
-notificationWorker.on('completed', (job) => {
+notificationWorker.on("completed", (job) => {
   console.log(`[Worker] Job ${job.id} completed successfully`);
 });
 
-notificationWorker.on('failed', (job, err) => {
+notificationWorker.on("failed", (job, err) => {
   console.error(`[Worker] Job ${job.id} failed with error: ${err.message}`);
 });

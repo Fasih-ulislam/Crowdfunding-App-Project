@@ -299,7 +299,7 @@ DECLARE
 BEGIN
     -- Update escrow
     UPDATE escrow_accounts
-    SET locked_amount = locked_amount + NEW.amount
+    SET locked_amount = locked_amount + (NEW.amount - v_fee_amt)
     WHERE milestone_id = NEW.milestone_id;
 
     -- Log transaction

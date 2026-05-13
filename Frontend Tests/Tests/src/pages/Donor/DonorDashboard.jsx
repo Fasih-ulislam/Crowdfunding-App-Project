@@ -36,6 +36,7 @@ export default function DonorDashboard() {
             .then(({ data }) => setCampaigns(Array.isArray(data) ? data : []))
             .catch(() => setCampaigns([]))
             .finally(() => setLoading(false));
+        console.log(campaigns)
     }, [tab, filter.category]);
 
     useEffect(() => {
