@@ -407,11 +407,6 @@ BEGIN
         UPDATE milestones SET status = 'Approved'
         WHERE id = NEW.milestone_id;
 
-        -- Log transfer transaction
-        INSERT INTO transactions (type, reference_id, reference_type, amount)
-        SELECT 'Transfer', NEW.id, 'vote_results', locked_amount
-        FROM escrow_accounts WHERE milestone_id = NEW.milestone_id;
-
         -- Update creator trust score
         UPDATE users SET trust_score = LEAST(trust_score + 5, 1000)
         WHERE id = (
@@ -436,12 +431,6 @@ BEGIN
         FROM donations
         WHERE milestone_id = NEW.milestone_id;
 
-        -- Log refund transactions
-        INSERT INTO transactions (type, reference_id, reference_type, amount)
-        SELECT 'Refund', d.id, 'donations', d.amount
-        FROM donations d
-        WHERE d.milestone_id = NEW.milestone_id;
-
         -- Penalize creator trust score
         UPDATE users SET trust_score = GREATEST(trust_score - 10, 0)
         WHERE id = (
@@ -454,13 +443,11 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_on_vote_result
 AFTER INSERT ON vote_results
 FOR EACH ROW EXECUTE FUNCTION fn_on_vote_result();
 
 
--- ── Procedure: process refunds (called by backend after Stripe)
+-- ── Procedure: process refunds (called by backend after Stripe) ──────
 CREATE OR REPLACE PROCEDURE process_refunds(
     p_milestone_id  UUID,
     p_refund_id     UUID,
@@ -474,6 +461,13 @@ BEGIN
         status = p_status
     WHERE id = p_refund_id
     AND milestone_id = p_milestone_id;
+
+    IF p_status = 'Completed' THEN
+        INSERT INTO transactions (type, reference_id, reference_type, amount)
+        SELECT 'Refund', d.id, 'donations', d.amount
+        FROM donations d
+        WHERE d.id = (SELECT donation_id FROM refunds WHERE id = p_refund_id);
+    END IF;
 END;
 $$;
 

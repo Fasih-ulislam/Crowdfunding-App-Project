@@ -89,7 +89,6 @@ const releaseEscrow = async (req, res, next) => {
   try {
     const { milestoneId } = req.params;
 
-    // Fetch all data needed for the transfer in one query
     const { rows } = await client.query(
       `SELECT
          ea.locked_amount,
@@ -121,14 +120,12 @@ const releaseEscrow = async (req, res, next) => {
         400,
       );
     }
-
     if (!payout_setup || !stripe_account_id) {
       throw new ResponseError(
         "Creator has not completed Stripe onboarding",
         400,
       );
     }
-
     if (locked_amount <= 0) {
       throw new ResponseError("No funds to transfer", 400);
     }
@@ -138,6 +135,14 @@ const releaseEscrow = async (req, res, next) => {
       stripeAccountId: stripe_account_id,
       milestoneId,
     });
+
+    // ✅ Log only after Stripe confirms the transfer
+    await client.query(
+      `INSERT INTO transactions (type, reference_id, reference_type, amount)
+       VALUES ('Transfer', $1, 'stripe_transfers', $2)`,
+      [transfer.id, locked_amount],
+    );
+
     await invalidateMilestoneCollectedCache(milestoneId);
 
     res.status(200).json({

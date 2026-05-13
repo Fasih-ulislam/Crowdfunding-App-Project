@@ -2,10 +2,10 @@ import writePool, { readPool } from "../config/database.js";
 
 export async function submitVote(donorId, milestoneId, vote) {
   const { rows } = await writePool.query(
-    `INSERT INTO votes (donor_id, milestone_id, vote)
+    `INSERT INTO votes (donor_id, milestone_id, vote) 
      VALUES ($1, $2, $3)
      RETURNING *`,
-    [donorId, milestoneId, vote]
+    [donorId, milestoneId, vote],
   );
   return rows[0];
 }
@@ -13,7 +13,7 @@ export async function submitVote(donorId, milestoneId, vote) {
 export async function getVoteResults(milestoneId) {
   const { rows } = await readPool.query(
     `SELECT * FROM vote_results WHERE milestone_id = $1`,
-    [milestoneId]
+    [milestoneId],
   );
   return rows[0] || null;
 }
@@ -22,7 +22,7 @@ export async function getLiveVoteCounts(milestoneId) {
   // Check if the milestone exists and is currently under review
   const milestoneCheck = await readPool.query(
     `SELECT id, status FROM milestones WHERE id = $1`,
-    [milestoneId]
+    [milestoneId],
   );
 
   if (milestoneCheck.rows.length === 0) {
@@ -60,13 +60,12 @@ export async function getLiveVoteCounts(milestoneId) {
        COUNT(*)                             AS total_votes
      FROM votes
      WHERE milestone_id = $1`,
-    [milestoneId]
+    [milestoneId],
   );
 
   const { yes_count, no_count, total_votes } = rows[0];
-  const yesPercentage = total_votes > 0
-    ? Math.round((yes_count / total_votes) * 10000) / 100
-    : 0;
+  const yesPercentage =
+    total_votes > 0 ? Math.round((yes_count / total_votes) * 10000) / 100 : 0;
 
   return {
     milestoneId,
