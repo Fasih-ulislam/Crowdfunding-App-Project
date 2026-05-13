@@ -136,7 +136,6 @@ const releaseEscrow = async (req, res, next) => {
       milestoneId,
     });
 
-    // ✅ Log only after Stripe confirms the transfer
     await client.query(
       `INSERT INTO transactions (type, reference_id, reference_type, amount)
        VALUES ('Transfer', $1, 'stripe_transfers', $2)`,
@@ -152,6 +151,7 @@ const releaseEscrow = async (req, res, next) => {
       amount: locked_amount,
     });
   } catch (err) {
+    await client.query("ROLLBACK");
     next(err);
   } finally {
     client.release();

@@ -398,16 +398,13 @@ CREATE OR REPLACE FUNCTION fn_on_vote_result()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.outcome = TRUE THEN
-        -- Release escrow
         UPDATE escrow_accounts
         SET status = 'Released', released_at = NOW()
         WHERE milestone_id = NEW.milestone_id;
 
-        -- Update milestone status
         UPDATE milestones SET status = 'Approved'
         WHERE id = NEW.milestone_id;
 
-        -- Update creator trust score
         UPDATE users SET trust_score = LEAST(trust_score + 5, 1000)
         WHERE id = (
             SELECT c.creator_id FROM milestones m
@@ -416,22 +413,18 @@ BEGIN
         );
 
     ELSE
-        -- Mark escrow for refund
         UPDATE escrow_accounts
         SET status = 'Refunded'
         WHERE milestone_id = NEW.milestone_id;
 
-        -- Update milestone status
         UPDATE milestones SET status = 'Rejected'
         WHERE id = NEW.milestone_id;
 
-        -- Create refund records for all donors
         INSERT INTO refunds (donation_id, milestone_id, amount, status)
         SELECT id, milestone_id, amount, 'Pending'
         FROM donations
         WHERE milestone_id = NEW.milestone_id;
 
-        -- Penalize creator trust score
         UPDATE users SET trust_score = GREATEST(trust_score - 10, 0)
         WHERE id = (
             SELECT c.creator_id FROM milestones m
@@ -442,7 +435,9 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql; 
+
+CREATE TRIGGER trg_on_vote_result
 AFTER INSERT ON vote_results
 FOR EACH ROW EXECUTE FUNCTION fn_on_vote_result();
 
