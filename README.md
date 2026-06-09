@@ -7,6 +7,7 @@ A full-stack crowdfunding platform built with a milestone-based funding model, S
 ## Table of Contents
 
 - [Overview](#overview)
+- [Demo Video](#demo-video)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
@@ -25,6 +26,11 @@ TrustFund is a platform where creators can launch campaigns, break them into mil
 
 ---
 
+## Demo video
+
+[demo](https://www.linkedin.com/posts/muhammad-fasih-cs_softwareengineering-webdevelopment-fullstackdevelopment-activity-7470066115176480768-lUvZ?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAAFqZJu8BVWq_GKhoARms2JZgZHPklQhKhuM)
+
+---
 ## Features
 
 ### Authentication & Authorization
