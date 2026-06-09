@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom';
 import { Clock, Target } from 'lucide-react';
 import { formatCurrency, daysLeft, fundingPercent, truncate, statusColor } from '../../utils/helpers';
 import clsx from 'clsx';
+import { getMediaUrl } from '../../utils/mediaUrl';
 
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 export default function CampaignCard({ campaign, linkBase = '/campaigns' }) {
     const {
@@ -15,7 +15,7 @@ export default function CampaignCard({ campaign, linkBase = '/campaigns' }) {
     
     const percent = fundingPercent(amount_raised ?? 0, total_goal);
     const days = daysLeft(deadline);
-    const imgSrc = media_url ? `${API_BASE}${media_url}` : null;
+    const imgSrc = getMediaUrl(media_url);
 
     return (
         <Link to={`${linkBase}/${id}`} className="card block overflow-hidden group">

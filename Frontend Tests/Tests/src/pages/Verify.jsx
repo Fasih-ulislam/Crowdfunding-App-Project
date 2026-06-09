@@ -24,7 +24,7 @@ const Verify = () => {
       try {
         // Call verify API with cookies automatically sent
         const response = await axios.get(
-          `http://localhost:3000/api/verify?token=${qrToken}`,
+          `http://localhost:80/api/verify?token=${qrToken}`,
           {
             withCredentials: true, // Enable sending cookies with request
           }

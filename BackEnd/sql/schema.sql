@@ -297,21 +297,23 @@ DECLARE
     v_fee_pct   NUMERIC(5,2) := 5.00;
     v_fee_amt   NUMERIC(12,2);
 BEGIN
+    -- Calculate platform fee first (avoid NULL arithmetic in updates)
+    v_fee_amt := ROUND(NEW.amount * v_fee_pct / 100, 2);
+
     -- Update escrow
     UPDATE escrow_accounts
     SET locked_amount = locked_amount + (NEW.amount - v_fee_amt)
     WHERE milestone_id = NEW.milestone_id;
 
-    -- Log transaction
+    -- Log transaction for donation
     INSERT INTO transactions (type, reference_id, reference_type, amount)
     VALUES ('Donation', NEW.id, 'donations', NEW.amount);
 
-    -- Calculate and record platform fee
-    v_fee_amt := ROUND(NEW.amount * v_fee_pct / 100, 2);
-
+    -- Record platform fee
     INSERT INTO platform_fees (donation_id, fee_amount, fee_percentage)
     VALUES (NEW.id, v_fee_amt, v_fee_pct);
 
+    -- Log transaction for fee
     INSERT INTO transactions (type, reference_id, reference_type, amount)
     VALUES ('Fee', NEW.id, 'donations', v_fee_amt);
 

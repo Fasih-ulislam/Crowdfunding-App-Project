@@ -73,7 +73,7 @@ export default function LoginPage() {
         setLoading(true);
         try {
             const { data } = await axios.post(
-                'http://localhost:3000/api/auth/google/select-role',
+                'http://localhost:80/api/auth/google/select-role',
                 { temp_token: tempToken, role: activeRole },
                 { withCredentials: true }
             );
@@ -207,7 +207,7 @@ export default function LoginPage() {
 
                             {/* Google Button */}
                             <a
-                                href="http://localhost:3000/api/auth/google"
+                                href="http://localhost:80/api/auth/google"
                                 className="flex items-center justify-center gap-3 w-full border border-[var(--color-border)] rounded-[var(--radius-btn)] py-3 text-sm font-semibold hover:bg-[var(--color-bg-subtle)] transition-colors"
                             >
                                 <img

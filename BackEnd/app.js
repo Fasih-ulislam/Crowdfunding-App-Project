@@ -38,11 +38,16 @@ app.post(
 
 /***************** MIDDLEWARES ****************/
 //Data format - limit payload size to prevent DoS
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
 //Security helmet
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // ← add this
+  }),
+);
 
 //CORS --> Restrict to allowed origins in production
 const allowedOrigins = process.env.ALLOWED_ORIGINS

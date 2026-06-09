@@ -45,7 +45,7 @@ export async function invalidateCampaignListCache() {
   }
 }
 
-async function invalidateCampaignDetailCache(campaignId) {
+export async function invalidateCampaignDetailCache(campaignId) {
   try {
     await redisConnection.del(buildCampaignDetailKey(campaignId));
   } catch (error) {
@@ -54,6 +54,11 @@ async function invalidateCampaignDetailCache(campaignId) {
       error.message,
     );
   }
+}
+
+export async function invalidateCampaignCaches(campaignId) {
+  await invalidateCampaignDetailCache(campaignId);
+  await invalidateCampaignListCache();
 }
 
 export async function getAllCampaigns({

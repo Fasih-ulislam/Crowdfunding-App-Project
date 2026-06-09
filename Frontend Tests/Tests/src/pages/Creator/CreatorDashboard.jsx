@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     LayoutDashboard, PlusCircle, BookOpen, Bell, ChevronRight,
-    CheckCircle, AlertCircle, Clock, Wallet
+    CheckCircle, AlertCircle, Clock, Wallet, Trash2
 } from 'lucide-react';
 import { campaignAPI, milestoneAPI, notificationAPI, paymentAPI, userAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
@@ -216,6 +216,24 @@ export default function CreatorDashboard({ defaultTab = 'overview' }) {
         }
     };
 
+    const handleDeleteCampaign = async (campaignId) => {
+        const confirmed = window.confirm(
+            'Are you sure you want to permanently delete this campaign? This cannot be undone.'
+        );
+        if (!confirmed) return;
+
+        try {
+            await campaignAPI.delete(campaignId);
+            toast.success('Campaign deleted successfully.');
+            if (expandedCampaign === campaignId) {
+                setExpandedCampaign(null);
+            }
+            await loadCampaigns();
+        } catch (err) {
+            toast.error(err.message);
+        }
+    };
+
     const handleStripeOnboarding = async () => {
         setOnboarding(true);
         try {
@@ -379,8 +397,8 @@ export default function CreatorDashboard({ defaultTab = 'overview' }) {
                             {/* Expanded: milestones */}
                             {expandedCampaign === c.id && (
                                 <div className="border-t border-[var(--color-border)] p-5">
-                                    {c.status === 'Draft' && (
-                                        <div className="mb-4 flex flex-wrap items-center gap-3">
+                                    <div className="mb-4 flex flex-wrap items-center gap-3">
+                                        {c.status === 'Draft' && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleSubmitCampaignForReview(c.id)}
@@ -388,11 +406,20 @@ export default function CreatorDashboard({ defaultTab = 'overview' }) {
                                             >
                                                 <CheckCircle size={14} /> Submit campaign for review
                                             </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteCampaign(c.id)}
+                                            className="inline-flex items-center gap-1.5 text-xs py-2 px-4 rounded-full border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+                                        >
+                                            <Trash2 size={14} /> Delete campaign
+                                        </button>
+                                        {c.status === 'Draft' && (
                                             <p className="text-xs text-[var(--color-text-muted)]">
                                                 An admin must approve before it appears as Active for donors.
                                             </p>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                     {c.status === 'PendingApproval' && (
                                         <p className="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                                             Awaiting admin approval — editing is locked until approved or returned to Draft.

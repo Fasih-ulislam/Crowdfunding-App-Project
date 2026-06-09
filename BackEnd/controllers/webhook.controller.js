@@ -3,6 +3,7 @@ import writePool, { readPool } from "../config/database.js";
 import ResponseError from "../utils/customError.js";
 import { queueNotificationJob } from "../services/queueService.js";
 import { invalidateMilestoneCollectedCache } from "../services/milestone.service.js";
+import { invalidateCampaignCaches } from "../services/campaign.service.js";
 
 // ─── Signature Verification ───────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ const handlePaymentSucceeded = async (paymentIntent) => {
 
   // Verify milestone & campaign exist and donations are allowed
   const { rows: milestoneRows } = await readPool.query(
-    `SELECT m.id, m.status, c.status AS campaign_status
+    `SELECT m.id, m.status, m.campaign_id, c.status AS campaign_status
      FROM milestones m
      JOIN campaigns c ON c.id = m.campaign_id
      WHERE m.id = $1`,
@@ -111,6 +112,7 @@ const handlePaymentSucceeded = async (paymentIntent) => {
     [donorId, milestoneId, amount, stripePaymentId],
   );
   await invalidateMilestoneCollectedCache(milestoneId);
+  await invalidateCampaignCaches(milestoneRows[0].campaign_id);
 
   console.log(
     `Donation inserted: donor=${donorId}, milestone=${milestoneId}, amount=${amount}`,

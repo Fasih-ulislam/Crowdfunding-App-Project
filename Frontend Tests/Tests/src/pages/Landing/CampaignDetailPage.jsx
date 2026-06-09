@@ -8,9 +8,17 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
+import { getMediaUrl } from '../../utils/mediaUrl';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+
+async function fetchVoteData(ms) {
+    if (!ms) return null;
+    if (ms.status === 'UnderReview') {
+        return voteAPI.getLive(ms.id);
+    }
+    return voteAPI.getResults(ms.id);
+}
 
 // Donation UI lives in its own component so it can use the Stripe hooks
 // (useStripe / useElements only work inside an <Elements> provider).
@@ -155,11 +163,15 @@ export default function CampaignDetailPage() {
 
             const results = {};
             for (const ms of milestonesData) {
-                if (ms.status === 'UnderReview' || ms.status === 'Approved') {
+                if (['UnderReview', 'Approved', 'Rejected'].includes(ms.status)) {
                     try {
-                        const vr = await voteAPI.getResults(ms.id);
-                        results[ms.id] = vr.data;
-                    } catch { /* no votes yet */ }
+                        const vr = await fetchVoteData(ms);
+                        if (vr?.data) {
+                            results[ms.id] = vr.data;
+                        }
+                    } catch {
+                        // No vote data available yet
+                    }
                 }
             }
             setVoteResults(results);
@@ -188,9 +200,11 @@ export default function CampaignDetailPage() {
         try {
             await voteAPI.cast(milestoneId, vote);
             toast.success(`Vote cast: ${vote ? 'Yes ✅' : 'No ❌'}`);
-            // Refresh vote results
-            const vr = await voteAPI.getResults(milestoneId);
-            setVoteResults((prev) => ({ ...prev, [milestoneId]: vr.data }));
+            // Refresh live vote counts for active milestones
+            const vr = await voteAPI.getLive(milestoneId);
+            if (vr?.data) {
+                setVoteResults((prev) => ({ ...prev, [milestoneId]: vr.data }));
+            }
         } catch (err) { toast.error(err.message); }
     };
 
@@ -221,7 +235,7 @@ export default function CampaignDetailPage() {
                     {/* Cover image */}
                     <div className="aspect-[16/9] bg-[var(--color-surface-3)] rounded-2xl overflow-hidden">
                         {coverImg ? (
-                            <img src={`${API_BASE}${coverImg.url}`} alt={campaign.title} className="w-full h-full object-cover" />
+                            <img src={getMediaUrl(coverImg.url)} alt={campaign.title} className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center">
                                 <Target size={48} className="text-[var(--color-text-muted)]" />

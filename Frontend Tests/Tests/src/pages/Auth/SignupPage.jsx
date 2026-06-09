@@ -159,7 +159,7 @@ export default function SignupPage() {
 
 {/* Google Button */}
 
-   <a href="http://localhost:3000/api/auth/google"
+   <a href="http://localhost:80/api/auth/google"
     className="flex items-center justify-center gap-3 w-full border border-[var(--color-border)] rounded-[var(--radius-btn)] py-3 text-sm font-semibold hover:bg-[var(--color-bg-subtle)] transition-colors"
 >
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
